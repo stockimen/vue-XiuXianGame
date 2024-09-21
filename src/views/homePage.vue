@@ -55,7 +55,7 @@
                         </el-icon>
                     </div>
                     <div class="tag attribute" @click="$notifys({title: '获得方式', message: '每转生一次可以增加50容量'})">
-                        背包总容量: {{ player.backpackCapacity }}
+                        背包容量: {{ player.inventory.length }} / {{ player.backpackCapacity }}
                         <el-icon>
                             <Warning />
                         </el-icon>
@@ -1846,7 +1846,7 @@
                 return `${num3.toFixed(2)}%`
             },
             copyContent (type) {
-                const content = type == 'qq' ? '920930589' : 'https://github.com/coolxitech/vue-XiuXianGame';
+                const content = type == 'qq' ? '920930589' : 'https://github.com/setube/vue-XiuXianGame';
                 this.$prompt('', type == 'qq' ? '官方群聊' : '开源地址', {
                     inputValue: content,
                     showCancelButton: false,
