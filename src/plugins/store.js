@@ -70,7 +70,21 @@ export const useMainStore = defineStore('main', {
             maxCultivation: 100,
             backpackCapacity: 50,
             sellingEquipmentData: [],
-            highestTowerFloor: 1
+            highestTowerFloor: 1,
+            rewardedTowerFloors: [],
+            nextGameTimes: {
+                rps: null,
+                dice: null,
+                fortune: null,
+                secretrealm: 0,
+                gamblingStone: null
+            },
+            gameWins: 0,
+            gameLosses: 0,
+            checkinDays: 0,
+            checkinStreak: 0,
+            lastCheckinDate: null,
+            fortuneTellingDate: null
         },
         // 怪物信息
         monster: {
