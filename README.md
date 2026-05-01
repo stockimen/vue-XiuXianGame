@@ -11,28 +11,49 @@
 ## 我的文字修仙全靠刷
 
 - 项目框架 [Vue.js](https://cn.vuejs.org)
-- 项目UI [Element Plus](https://element-plus.org/zh-CN)
+- 项目 UI [Element Plus](https://element-plus.org/zh-CN)
 - 状态管理库 [Pinia](https://pinia.vuejs.org/zh)
-  
-Docker贡献者：
+
+Docker 贡献者：
 
 - wuchenchina [无尘](https://github.com/wuchenchina)
 - CoolXiTech [酷曦科技](https://github.com/CoolXiTech)
-  
+- Firfr [Firfe](https://github.com/Firfr)
+
 鸣谢以上开源项目及贡献者，排名不分先后.
 
-## 项目安装
+## 快速开始
 
-- [安装](https://github.com/setube/vue-XiuXianGame/wiki/install)
-- [Docker安装](https://github.com/setube/vue-XiuXianGame/wiki/docker_install)
+- [本地安装指南](https://github.com/setube/vue-xiuxiangame/wiki/%E6%9C%AC%E5%9C%B0%E5%AE%89%E8%A3%85%E6%8C%87%E5%8D%97)
+- [Docker 部署指南](https://github.com/setube/vue-xiuxiangame/wiki/Docker%E9%83%A8%E7%BD%B2%E6%8C%87%E5%8D%97)
 
-## 免责声明
+## 版权声明
 
-我的文字修仙全靠刷程序是免费开源的产品，仅用于学习交流使用！       
-不可用于任何违反`中华人民共和国(含台湾省)`或`使用者所在地区`法律法规的用途。      
-因为作者即本人仅完成代码的开发和开源活动`(开源即任何人都可以下载使用)`，从未参与用户的任何运营和盈利活动。    
-且不知晓用户后续将`程序源代码`用于何种用途，故用户使用过程中所带来的任何法律责任即由用户自己承担。      
+知识共享署名-非商业性使用 4.0 国际许可协议
 
-## License
+本作品采用知识共享署名-非商业性使用 4.0 国际许可协议进行许可。
+要查看此许可协议的副本，请访问 http://creativecommons.org/licenses/by-nc/4.0/。
 
-我的文字修仙全靠刷 vue-XiuXianGame Inc [MIT license](https://opensource.org/licenses/MIT).
+您自由地：
+共享 — 在任何媒介以任何形式复制、发行本作品
+改编 — 修改、转换或以本作品为基础进行创作
+
+惟须遵守以下条件：
+署名 — 您必须给出适当的署名，提供指向本许可协议的链接，同时标明是否（对原始作品）作了修改。您可以用任何合理的方式来署名，但不得以任何方式暗示许可人为您或您的使用背书。
+
+非商业性使用 — 您不得将本作品用于商业目的。
+
+没有附加限制 — 您不得适用法律术语或者技术措施从而限制其他人做许可协议允许的事情。
+
+声明：
+本作品是作者（谦君）的原创作品，项目源码地址：https://github.com/setube/vue-xiuxiangame
+本授权条款不得被视为或解释为对任何版权的放弃或其他限制。
+
+当您分享本作品的改编版本时，您必须：
+
+- 在显著位置标注原作者的署名
+- 保留本许可协议文档
+- 明确说明修改内容及修改日期
+- 使用相同的 CC BY-NC 4.0 协议进行分发
+
+© 2025 谦君 - 保留所有权利（根据本许可协议授予的权限除外）

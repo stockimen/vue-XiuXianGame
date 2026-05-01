@@ -1,24 +1,22 @@
 <template>
-    <el-tag :disable-transitions="true" :class="customTypeClass">
-        <slot></slot>
-    </el-tag>
+  <el-tag :disable-transitions="true" :class="customTypeClass">
+    <slot></slot>
+  </el-tag>
 </template>
 
-<script>
-    export default {
-        name: 'CustomTag',
-        props: {
-            type: {
-                type: String,
-                default: 'info',
-            }
-        },
-        computed: {
-            customTypeClass () {
-                if (this.type === 'pink') return 'el-tag--pink';
-                else if (this.type === 'purple') return 'el-tag--purple';
-                else return `el-tag--${this.type}`;
-            }
-        }
-    };
+<script setup>
+  import { computed } from 'vue'
+
+  const props = defineProps({
+    type: {
+      type: String,
+      default: 'info'
+    }
+  })
+
+  const customTypeClass = computed(() => {
+    if (props.type === 'pink') return 'el-tag--pink'
+    else if (props.type === 'purple') return 'el-tag--purple'
+    else return `el-tag--${props.type}`
+  })
 </script>

@@ -1,82 +1,82 @@
-import map from '../views/mapExploration.vue';
-import boss from '../views/bossPage.vue';
-import home from '../views/homePage.vue';
-import index from '../views/indexPage.vue';
-import explore from '../views/explorePage.vue';
-import cultivate from '../views/cultivatePage.vue';
+import map from '../views/mapExploration.vue'
+import boss from '../views/bossPage.vue'
+import home from '../views/homePage.vue'
+import index from '../views/indexPage.vue'
+import explore from '../views/explorePage.vue'
+import cultivate from '../views/cultivatePage.vue'
 import endlesstower from '../views/endlessPage.vue'
 import game from '../views/game/game.vue'
-import { createRouter, createWebHashHistory } from 'vue-router';
+import { createRouter, createWebHashHistory } from 'vue-router'
 
 const routes = [
-    {
-        path: '/',
-        name: 'index',
-        meta: {
-            keepAlive: false
-        },
-        component: index
+  {
+    path: '/',
+    name: 'index',
+    meta: {
+      keepAlive: false
     },
-    {
-        path: '/home',
-        name: 'home',
-        meta: {
-            keepAlive: false
-        },
-        component: home
+    component: index
+  },
+  {
+    path: '/home',
+    name: 'home',
+    meta: {
+      keepAlive: false
     },
-    {
-        path: '/cultivate',
-        name: 'cultivate',
-        meta: {
-            keepAlive: false
-        },
-        component: cultivate
+    component: home
+  },
+  {
+    path: '/cultivate',
+    name: 'cultivate',
+    meta: {
+      keepAlive: false
     },
-    {
-        path: '/map',
-        name: 'map',
-        meta: {
-            keepAlive: false
-        },
-        component: map
+    component: cultivate
+  },
+  {
+    path: '/map',
+    name: 'map',
+    meta: {
+      keepAlive: false
     },
-    {
-        path: '/explore',
-        name: 'explore',
-        meta: {
-            keepAlive: false
-        },
-        component: explore
+    component: map
+  },
+  {
+    path: '/explore',
+    name: 'explore',
+    meta: {
+      keepAlive: false
     },
-    {
-        path: '/boss',
-        name: 'boss',
-        meta: {
-            keepAlive: false
-        },
-        component: boss
+    component: explore
+  },
+  {
+    path: '/boss',
+    name: 'boss',
+    meta: {
+      keepAlive: false
     },
-    {
-        path: '/endlesstower',
-        name: 'endlesstower',
-        meta: {
-            keepAlive: false
-        },
-        component: endlesstower
+    component: boss
+  },
+  {
+    path: '/endlesstower',
+    name: 'endlesstower',
+    meta: {
+      keepAlive: false
     },
-    {
-        path: '/game',
-        name: 'game',
-        meta: {
-            keepAlive: false
-        },
-        component: game
+    component: endlesstower
+  },
+  {
+    path: '/game',
+    name: 'game',
+    meta: {
+      keepAlive: false
     },
-];
+    component: game
+  }
+]
 const router = createRouter({
-    history: createWebHashHistory(),
-    routes
-});
+  history: createWebHashHistory(),
+  routes
+})
 
-export default router;
+export default router
