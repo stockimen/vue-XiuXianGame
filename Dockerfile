@@ -1,19 +1,16 @@
-FROM node:20.16.0
+# 构建阶段
+FROM node:lts AS build 
+WORKDIR /app
+COPY . .
+RUN npm install && \
+  npm run build
 
-RUN mkdir -p /workspace
+# 运行阶段
+FROM node:lts AS runtime 
+WORKDIR /app
+COPY --from=build /app/dist /app
+RUN npm install -g http-server
 
-WORKDIR /workspace
+EXPOSE 8080
 
-RUN npm config set registry https://registry.npmmirror.com
-
-RUN cd /workspace
-
-RUN git clone https://mirror.ghproxy.com/https://github.com/setube/vue-XiuXianGame.git
-
-RUN mv ./vue-XiuXianGame/* . ; rm -rf ./vue-XiuXianGame/
-
-RUN npm i ; npm i element-ui
-
-RUN npm run build
-
-CMD ["npm", "run", "serve"]
+CMD ["http-server", "/app", "-p", "8080"]
