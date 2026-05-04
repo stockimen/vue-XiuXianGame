@@ -414,8 +414,7 @@
             return
           }
           // 清空已击杀敌人
-          player.value.taskNum = 0
-          // 增加境界
+          player.value.taskNum = player.value.keepExcessKills ? Math.max(0, player.value.taskNum - player.value.level) : 0
           player.value.level++
           // 增加点数
           player.value.points += 3

@@ -985,6 +985,8 @@
           <el-button type="danger" class="dialog-footer-button">导入脚本</el-button>
         </el-upload>
         <el-button type="warning" class="dialog-footer-button" @click="deleteScriptData">删除脚本</el-button>
+        <el-divider>金手指</el-divider>
+        <el-switch v-model="player.keepExcessKills" active-text="击杀溢出保留" style="margin-bottom: 10px" />
         <el-divider>其他相关</el-divider>
         <el-button class="dialog-footer-button" @click="sellingEquipmentBox">批量处理</el-button>
         <el-button type="primary" class="dialog-footer-button" @click="copyContent('qq')">官方群聊</el-button>

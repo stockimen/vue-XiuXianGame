@@ -141,7 +141,7 @@
           )
           return
         }
-        player.value.taskNum = 0
+        player.value.taskNum = player.value.keepExcessKills ? Math.max(0, player.value.taskNum - player.value.level) : 0
         player.value.level++
         player.value.points += 3
         player.value.health = player.value.maxHealth
