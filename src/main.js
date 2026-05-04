@@ -30,6 +30,7 @@ if ('serviceWorker' in navigator) {
 
 // 每10分钟自动领取在线礼包（金手指）
 import { useMainStore } from '@/plugins/store'
+import { gameNotifys } from '@/plugins/game'
 const store = useMainStore()
 setInterval(() => {
   if (store.player.autoOnlineGift) {
@@ -39,5 +40,9 @@ setInterval(() => {
     store.player.props.strengtheningStone += 1000 * mult
     store.player.props.qingyuan += 10 * mult
     store.player.props.flying += 10 * mult
+    gameNotifys({
+      title: '在线礼包',
+      message: `自动领取成功！获得${1000 * mult}灵石、${1000 * mult}培养丹、${1000 * mult}炼器石、${10 * mult}情缘、${10 * mult}传送符`
+    })
   }
 }, 10 * 60 * 1000)

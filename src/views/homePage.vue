@@ -1144,7 +1144,7 @@
 
   const store = useMainStore()
   const router = useRouter()
-  const ver = ref('1.1.0')
+  const ver = ref('1.2.0')
   // 错误信息
   const err = ref('')
   const show = ref(false)
