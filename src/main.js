@@ -20,3 +20,10 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 app.use(router)
 app.use(ElementPlus)
 app.mount('#app')
+
+// 每小时检查一次 Service Worker 更新
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.ready.then(registration => {
+    setInterval(() => registration.update(), 60 * 60 * 1000)
+  })
+}
