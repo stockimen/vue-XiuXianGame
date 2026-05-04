@@ -3,6 +3,11 @@
     <div class="cultivate" v-if="monster.name">
       你遇到了
       <span class="el-tag el-tag--danger" @click="openMonsterInfo" v-text="monster.name" />
+      <div class="realm-info">
+        <span>{{ levelNames(player.level || 1) }}</span>
+        <span>修为 {{ player.cultivation }} / {{ player.maxCultivation }}</span>
+        <span v-if="player.level > 10">击杀 {{ player.taskNum }} / {{ player.level }}</span>
+      </div>
       <div class="storyText">
         <div class="storyText-box">
           <el-scrollbar ref="scrollbar" always>
@@ -556,6 +561,14 @@
 </script>
 
 <style scoped>
+  .realm-info {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    font-size: 13px;
+    color: #909399;
+    margin: 4px 0;
+  }
   .actions .action {
     width: calc(33.333% - 10px);
     margin: 5px;
