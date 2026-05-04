@@ -31,6 +31,12 @@
           </template>
         </el-switch>
       </div>
+      <!-- 全局停止自动探索按钮 -->
+      <div class="global-stop-explore" v-if="store.autoExploring" @click="store.stopAutoExplore()">
+        <el-button type="danger" size="large" circle>
+          <el-icon><Close /></el-icon>
+        </el-button>
+      </div>
     </div>
     <div class="wm_bg_1" v-if="!player.dark" />
     <div class="wm_bg_2" v-if="!player.dark" />
@@ -41,10 +47,12 @@
   import { useRoute } from 'vue-router'
   import { ref, watch, computed, onMounted } from 'vue'
   import { useMainStore } from './plugins/store'
+  import { Close } from '@element-plus/icons-vue'
 
   const player = ref({})
   const route = useRoute()
   const key = computed(() => route.path)
+  const store = useMainStore()
 
   watch(
     () => player.value.dark,
@@ -142,6 +150,23 @@
     border-radius: 50%;
     color: #cfd3dc;
     background-color: #141414;
+  }
+
+  .global-stop-explore {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
   }
 
   @media only screen and (max-width: 768px) {
@@ -414,7 +439,7 @@
   }
 
   .storyText-box {
-    height: 650px;
+    height: 600px;
     overflow: auto;
     padding: 0 20px 0 0;
   }

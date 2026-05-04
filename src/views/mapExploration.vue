@@ -831,13 +831,12 @@
   }
 
   const stopAutoExplore = (goHome) => {
-    store.autoExploring = false
+    store.stopAutoExplore()
     stopAutoMove()
     lastDirection.value = null
     directionHistory.value = []
     currentPath.value = []
     pathStepIndex.value = 0
-    store.pathfindTarget = null
     if (goHome) {
       store.mapData = { y: 0, x: 0, map: [] }
       store.mapScroll = 0
@@ -1282,6 +1281,18 @@
     // 移除键盘监听
     window.removeEventListener('keydown', move)
   })
+
+  // 监听自动探索状态，从全局停止时清理本地状态
+  watch(() => store.autoExploring, (newVal, oldVal) => {
+    if (oldVal && !newVal) {
+      // 从开启变为关闭
+      stopAutoMove()
+      lastDirection.value = null
+      directionHistory.value = []
+      currentPath.value = []
+      pathStepIndex.value = 0
+    }
+  })
 </script>
 
 <style scoped>
@@ -1289,6 +1300,7 @@
     max-width: 770px;
     height: 500px;
     overflow: auto;
+    overscroll-behavior: contain;
   }
 
   .grid-container {

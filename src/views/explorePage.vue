@@ -5,7 +5,7 @@
       <span class="el-tag el-tag--danger" @click="openMonsterInfo" v-text="monster.name" />
       <div class="realm-info">
         <span>{{ levelNames(player.level || 1) }}</span>
-        <span>修为 {{ player.cultivation }} / {{ player.maxCultivation }}</span>
+        <span>修为 {{ formatNum(player.cultivation) }} / {{ formatNum(player.maxCultivation) }}</span>
         <span v-if="player.level > 10">击杀 {{ player.taskNum }} / {{ player.level }}</span>
       </div>
       <div class="storyText">
@@ -85,6 +85,11 @@
 
   const store = useMainStore()
   const router = useRouter()
+
+  const formatNum = num => {
+    if (num >= 1e10) return num.toExponential(2)
+    return Math.floor(num).toLocaleString()
+  }
   // 日志
   const texts = ref([])
   // 是否结束战斗
@@ -605,6 +610,31 @@
     color: #909399;
     margin: 4px 0;
   }
+
+  .cultivate {
+    position: relative;
+    min-height: calc(100vh - 200px);
+    padding-bottom: 80px;
+  }
+
+  .storyText-box {
+    padding-bottom: 20px;
+  }
+
+  .actions {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 10px 20px;
+    z-index: 100;
+  }
+
+  html.dark .actions {
+    background: rgba(20, 20, 20, 0.95);
+  }
+
   .actions .action {
     width: calc(33.333% - 10px);
     margin: 5px;

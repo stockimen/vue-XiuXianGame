@@ -119,6 +119,12 @@ export const useMainStore = defineStore('main', {
     autoPathfind: false,
     pathfindTarget: null
   }),
+  actions: {
+    stopAutoExplore() {
+      this.autoExploring = false
+      this.pathfindTarget = null
+    }
+  },
   persist: {
     key: 'vuex',
     paths: ['boss', 'player'],
