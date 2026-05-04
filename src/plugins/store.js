@@ -75,6 +75,7 @@ export const useMainStore = defineStore('main', {
       keepBestEquipment: false,
       keepBestPet: false,
       keepExcessKills: false,
+      autoOnlineGift: false,
       highestTowerFloor: 1,
       rewardedTowerFloors: [],
       nextGameTimes: {

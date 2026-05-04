@@ -27,3 +27,17 @@ if ('serviceWorker' in navigator) {
     setInterval(() => registration.update(), 60 * 60 * 1000)
   })
 }
+
+// 每10分钟自动领取在线礼包（金手指）
+import { useMainStore } from '@/plugins/store'
+const store = useMainStore()
+setInterval(() => {
+  if (store.player.autoOnlineGift) {
+    const mult = store.player.reincarnation || 1
+    store.player.props.money += 1000 * mult
+    store.player.props.cultivateDan += 1000 * mult
+    store.player.props.strengtheningStone += 1000 * mult
+    store.player.props.qingyuan += 10 * mult
+    store.player.props.flying += 10 * mult
+  }
+}, 10 * 60 * 1000)
