@@ -1144,7 +1144,7 @@
 
   const store = useMainStore()
   const router = useRouter()
-  const ver = ref('1.2.0')
+  const ver = ref('1.2.1')
   // 错误信息
   const err = ref('')
   const show = ref(false)
@@ -2404,7 +2404,7 @@
     }
     if (player.value.points > 0) {
       const num = player.value.reincarnation ? player.value.reincarnation * 10 : 1
-      const numText = type == 'attack' || type == 'defense' ? 50 * num : 100 * num
+      const numText = type == 'attack' || type == 'defense' ? 300 * num : 600 * num
       // 如果是攻击
       if (type == 'attack') playerAttribute(0, numText, 0, 0, 0)
       // 如果是防御
