@@ -946,10 +946,16 @@
       <el-checkbox-group v-model="player.sellingEquipmentData" @change="sellingEquipmentDataChange">
         <el-checkbox v-for="(item, index) in AllEquipmenType" :value="item" :key="index" :label="levels[item]" />
       </el-checkbox-group>
+      <div style="margin-top: 10px">
+        <el-switch v-model="player.keepBestEquipment" active-text="保留最高评分" />
+      </div>
       <div class="dialog-footer" style="margin-top: 20px">
         <el-button class="dialog-footer-button" @click="sellingEquipment">分解装备</el-button>
       </div>
       <el-divider>灵宠</el-divider>
+      <div style="margin-top: 10px">
+        <el-switch v-model="player.keepBestPet" active-text="保留最高评分" />
+      </div>
       <div class="dialog-footer" style="margin-top: 20px">
         <el-button class="dialog-footer-button" @click="sellingPet">放生灵宠</el-button>
       </div>
@@ -1460,8 +1466,19 @@
       })
       return
     }
+    // 保留评分最高的灵宠
+    let bestPetId = null
+    if (player.value.keepBestPet) {
+      let bestScore = -1
+      pets.forEach(p => {
+        if (!p.lock && p.score > bestScore) {
+          bestScore = p.score
+          bestPetId = p.id
+        }
+      })
+    }
     // 过滤出可以放生的灵宠
-    const selling = pets.filter(item => !item.lock)
+    const selling = pets.filter(item => !item.lock && item.id !== bestPetId)
     // 检查是否有可以放生的灵宠
     if (!selling.length) {
       gameNotifys({
@@ -1482,8 +1499,8 @@
     }, 0)
     // 增加培养丹数量
     player.value.props.cultivateDan += cultivateDanTotal
-    // 清空背包内所有未锁定灵宠
-    player.value.pets = pets.filter(item => item.lock)
+    // 清空背包内所有未锁定灵宠（保留最高评分）
+    player.value.pets = pets.filter(item => item.lock || item.id === bestPetId)
     gameNotifys({
       title: '灵宠放生提示',
       message: `所有非锁定灵宠已成功放生, 他们临走前一起赠与了你${cultivateDanTotal}个培养丹`

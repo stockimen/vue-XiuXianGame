@@ -334,6 +334,38 @@
     }
   }
 
+  // 自动出售装备（背包满时）
+  const autoSellEquipment = () => {
+    const selling = player.value.sellingEquipmentData
+    if (!selling.length) return false
+    // 保留每种类型中评分最高的装备
+    const keepIds = new Set()
+    if (player.value.keepBestEquipment) {
+      const byType = {}
+      player.value.inventory.forEach(item => {
+        if (!byType[item.type] || item.score > byType[item.type].score) {
+          byType[item.type] = item
+        }
+      })
+      Object.values(byType).forEach(item => keepIds.add(item.id))
+    }
+    const toSell = player.value.inventory.filter(
+      item => selling.includes(item.quality) && !item.lock && !keepIds.has(item.id)
+    )
+    if (!toSell.length) return false
+    const stones = toSell.reduce((total, i) => {
+      let lv = i.level + (i.level * player.value.reincarnation) / 10
+      return total + Math.floor(Number(lv) || 0)
+    }, 0)
+    player.value.props.strengtheningStone += stones
+    player.value.props.money += toSell.length
+    player.value.inventory = player.value.inventory.filter(
+      item => !selling.includes(item.quality) || item.lock || keepIds.has(item.id)
+    )
+    texts.value.push(`自动出售${toSell.length}件装备, 获得${stones}炼器石和${toSell.length}灵石`)
+    return true
+  }
+
   // 发现道具
   const findTreasure = () => {
     let equipItem = {}
@@ -358,7 +390,12 @@
     openEquipItemInfo.value = equipItem
     // 如果装备背包当前容量大于等于背包总容量
     if (player.value.inventory.length >= player.value.backpackCapacity) {
-      texts.value.push(`当前装备背包容量已满, 该装备自动丢弃, 转生可增加背包容量`)
+      // 自动模式下尝试自动出售
+      if (isAutoMode.value && autoSellEquipment() && player.value.inventory.length < player.value.backpackCapacity) {
+        player.value.inventory.push(equipItem)
+      } else {
+        texts.value.push(`当前装备背包容量已满, 该装备自动丢弃, 转生可增加背包容量`)
+      }
     } else {
       // 玩家获得道具
       player.value.inventory.push(equipItem)

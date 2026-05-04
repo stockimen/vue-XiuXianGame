@@ -72,6 +72,8 @@ export const useMainStore = defineStore('main', {
       maxCultivation: 100,
       backpackCapacity: 50,
       sellingEquipmentData: [],
+      keepBestEquipment: false,
+      keepBestPet: false,
       highestTowerFloor: 1,
       rewardedTowerFloors: [],
       nextGameTimes: {
