@@ -88,11 +88,11 @@ const shop = {
     }
     // 计算评分
     const score =
-      dodge * weights.dodgeRate +
+      dodge * weights.dodgeRate * 100 +
       attack * weights.attack +
       (health / 100) * weights.health +
       defense * weights.defense +
-      critical * weights.critRate
+      critical * weights.critRate * 100
     return Math.floor(score)
   }
 }

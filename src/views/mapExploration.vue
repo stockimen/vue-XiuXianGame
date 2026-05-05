@@ -74,6 +74,7 @@
         <el-checkbox v-model="store.autoFight" @change="onAutoFightChange">自动战斗</el-checkbox>
         <el-checkbox v-model="store.autoCapture" @change="onAutoCaptureChange" :disabled="!store.autoFight">自动收服</el-checkbox>
         <el-checkbox v-model="store.autoPathfind">自动寻路</el-checkbox>
+        <el-checkbox v-model="store.autoFishing">自动钓鱼</el-checkbox>
       </div>
     </div>
     <el-drawer v-model="fishingShow" @close="endGame" title="钓鱼" direction="rtl" class="strengthen">
@@ -255,6 +256,8 @@
   // 自动寻路相关
   const currentPath = ref([])
   const pathStepIndex = ref(0)
+  // 自动钓鱼锁定目标
+  const fishingTarget = ref(null)
   // 钓鱼点坐标
   const fishingMap = ref([])
   // 钓鱼弹窗
@@ -601,16 +604,16 @@
             name: item.name,
             level: 0,
             dodge: 0,
-            attack: 10,
-            health: 100,
-            defense: 10,
+            attack: 100,
+            health: 1000,
+            defense: 100,
             critical: 0,
             reincarnation: 0
           })
           gameNotifys({ title: '提示', message: '你成功邀请对方与你结为道侣', position: 'top-left' })
         } else {
-          npcInfo.value.favorability = 0
-          gameNotifys({ title: '提示', message: '对方拒绝了你的邀请, 好感度清空', position: 'top-left' })
+          npcInfo.value.favorability = Math.floor(npcInfo.value.favorability * 0.5)
+          gameNotifys({ title: '提示', message: '对方拒绝了你的邀请, 好感度降低了一半', position: 'top-left' })
         }
       })
       .catch(() => {})
@@ -642,12 +645,12 @@
         // 增加好感度
         npcInfo.value.favorability += item.plus
         // 增加传送符
-        player.value.props.flying += index
+        player.value.props.flying += item.plus
         // 增加情缘点
-        player.value.props.qingyuan += index
+        player.value.props.qingyuan += item.plus
         gameNotifys({
           title: '赠送提示',
-          message: `赠送成功, ${npcInfo.value.name}对你的好感度增加了, 并赠与了你${index}张传送符和${index}点情缘`,
+          message: `赠送成功, ${npcInfo.value.name}对你的好感度增加了, 并赠与了你${item.plus}张传送符和${item.plus}点情缘`,
           position: 'top-left'
         })
       })
@@ -721,7 +724,7 @@
         // 防御
         defense: monster.monster_Defense(monsterLv),
         // 闪避率
-        dodge: monster.monster_Criticalhitrate(monsterLv),
+        dodge: monster.monster_Dodge(monsterLv),
         // 暴击
         critical: monster.monster_Criticalhitrate(monsterLv)
       }
@@ -796,6 +799,54 @@
       if (!store.autoExploring) { stopAutoMove(); return }
       if (player.value.health <= 0) { stopAutoExplore(true); return }
 
+      // 自动钓鱼模式
+      if (store.autoFishing && !fishingShow.value) {
+        // 检查附近是否有钓鱼点
+        if (isFishing.value) {
+          autoCompleteFishing()
+          fishingTarget.value = null
+          currentPath.value = []
+          pathStepIndex.value = 0
+          return
+        }
+        // 有已保存的路径，按步前进
+        if (currentPath.value.length > 0 && pathStepIndex.value < currentPath.value.length) {
+          const dir = getNextPathDirection()
+          if (dir) {
+            pathStepIndex.value++
+            move(dir)
+            return
+          }
+          // 路径被阻断，重新规划
+          currentPath.value = []
+          pathStepIndex.value = 0
+        }
+        // 没有路径，选目标并规划
+        if (!fishingTarget.value || grid.value[fishingTarget.value.index]?.type !== 'fishing') {
+          fishingTarget.value = findNearestFishingSpot()
+        }
+        if (fishingTarget.value) {
+          const adjacent = findAdjacentEmptyCell(fishingTarget.value.y, fishingTarget.value.x)
+          if (adjacent) {
+            const path = findPath([playerY.value, playerX.value], adjacent)
+            if (path && path.length > 0) {
+              currentPath.value = path
+              pathStepIndex.value = 0
+              // 立即走第一步
+              const dir = getNextPathDirection()
+              if (dir) {
+                pathStepIndex.value++
+                move(dir)
+                return
+              }
+            }
+          }
+          // 无法到达该钓鱼点，清除重选
+          fishingTarget.value = null
+        }
+        // 没有可用的钓鱼点，fallthrough 到随机游走
+      }
+
       if (store.autoPathfind) {
         // 自动寻路模式
         let dir = getNextPathDirection()
@@ -837,6 +888,7 @@
     directionHistory.value = []
     currentPath.value = []
     pathStepIndex.value = 0
+    fishingTarget.value = null
     if (goHome) {
       store.mapData = { y: 0, x: 0, map: [] }
       store.mapScroll = 0
@@ -1109,7 +1161,7 @@
       const fishInfo = getRandomFish()
       // 清空所有定时
       clearAllTiming()
-      ElMessageBox.confirm(fishInfo.description, fishInfo.name, {
+      ElMessageBox.confirm(fishInfo.description, `钓上了${fishInfo.weight}斤的${fishInfo.name}`, {
         center: true,
         showClose: false,
         lockScroll: false,
@@ -1121,8 +1173,11 @@
           // 结束游戏
           endGame()
           // 增加灵石数量
-          player.value.props.money += fishInfo.price
-          gameNotifys({ title: '提示', message: `你获得了${fishInfo.price}灵石`, position: 'top-left' })
+          player.value.props.money += fishInfo.totalPrice
+          // 记录钓鱼数据
+          player.value.fishCount = (player.value.fishCount || 0) + 1
+          player.value.maxFishWeight = Math.max(player.value.maxFishWeight || 0, fishInfo.weight)
+          gameNotifys({ title: '提示', message: `卖出了${fishInfo.weight}斤的${fishInfo.name}，获得了${fishInfo.totalPrice}灵石`, position: 'top-left' })
         })
         .catch(() => {})
     }
@@ -1207,6 +1262,8 @@
   const getRandomFish = () => {
     const random = Math.random()
     let cumulativeProbability = 0
+    // 斤数: 偏态分布，大鱼稀有 (50%≤7斤, 75%≤15斤, 95%≤27斤)
+    const weight = Math.floor(Math.pow(Math.random(), 0.5) * 30) + 1
     const fishList = [
       { name: '金鳞鲤鱼', price: 100, description: '金色鳞片的鲤鱼，象征着好运和财富。', probability: 0.25 },
       { name: '青铜鲑鱼', price: 150, description: '体型健硕的鲑鱼，常出现在清凉的河流中。', probability: 0.2 },
@@ -1234,11 +1291,68 @@
       // 累加概率
       cumulativeProbability += fish.probability
       if (random < cumulativeProbability) {
-        // 一旦随机数小于当前累加的概率，返回该鱼
-        return fish
+        // 返回鱼的信息（含斤数和总价）
+        return { ...fish, weight, totalPrice: fish.price * weight }
       }
     }
     // 如果没有匹配到
+    return null
+  }
+
+  // 自动钓鱼：跳过小游戏直接出结果
+  const autoCompleteFishing = () => {
+    const fishInfo = getRandomFish()
+    if (!fishInfo) return
+    // 移除钓鱼点
+    const index = store.fishingMap.find(i => nearbyIndices.value.includes(i))
+    if (index !== undefined) {
+      grid.value[index].type = 'empty'
+      store.fishingMap = store.fishingMap.filter(i => i !== index)
+      // 保存地图数据
+      store.mapData = { y: playerY.value, x: playerX.value, map: grid.value }
+    }
+    // 钓鱼点耗光，重新生成
+    if (store.fishingMap.length === 0) {
+      generateItems('fishing', 10, createSafeZone())
+      store.mapData = { y: playerY.value, x: playerX.value, map: grid.value }
+    }
+    // 获得灵石
+    player.value.props.money += fishInfo.totalPrice
+    // 记录钓鱼数据
+    player.value.fishCount = (player.value.fishCount || 0) + 1
+    player.value.maxFishWeight = Math.max(player.value.maxFishWeight || 0, fishInfo.weight)
+    gameNotifys({
+      title: '自动钓鱼',
+      message: `钓上了${fishInfo.weight}斤的${fishInfo.name}，获得${fishInfo.totalPrice}灵石`,
+      position: 'top-left'
+    })
+  }
+
+  // 寻找最近的钓鱼点
+  const findNearestFishingSpot = () => {
+    let nearest = null
+    let minDist = Infinity
+    for (const idx of store.fishingMap) {
+      const fy = Math.floor(idx / gridSize.value)
+      const fx = idx % gridSize.value
+      const dist = Math.abs(fy - playerY.value) + Math.abs(fx - playerX.value)
+      if (dist < minDist) { minDist = dist; nearest = { y: fy, x: fx, index: idx } }
+    }
+    return nearest
+  }
+
+  // 找到钓鱼点旁边的一个空地坐标（用于寻路目标）
+  const findAdjacentEmptyCell = (fy, fx) => {
+    const dirs = [[0, 1], [0, -1], [1, 0], [-1, 0]]
+    for (const [dy, dx] of dirs) {
+      const ny = fy + dy
+      const nx = fx + dx
+      if (ny >= 0 && ny < gridSize.value && nx >= 0 && nx < gridSize.value) {
+        if (grid.value[ny * gridSize.value + nx].type === 'empty') {
+          return [ny, nx]
+        }
+      }
+    }
     return null
   }
 

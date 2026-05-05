@@ -1,5 +1,5 @@
 const equips = {
-  drawPrize(lv, type, names_a, names_b, names_c, names_d, names_e, names_f, isNewbie) {
+  drawPrize(lv, type, names_a, names_b, names_c, names_d, names_e, names_f, isNewbie, names_g) {
     // 如果玩家等级为0 生成的装备等级最低为1, 如果玩家等级低于40级的话就随机生成当前等级和低于当前等级的装备
     lv = lv == 0 ? 1 : lv
     // 如果已领取新手礼包
@@ -11,7 +11,8 @@ const equips = {
       primary: { names: names_c, probability: 15 }, // 蓝装
       purple: { names: names_d, probability: 9 }, // 紫装
       warning: { names: names_e, probability: 5 }, // 金装
-      danger: { names: names_f, probability: 1 } // 红装
+      danger: { names: names_f, probability: 1 }, // 红装
+      pink: { names: names_g || names_f, probability: 0.05 } // 仙装 0.05%
     }
     const totalProbability = Object.values(weaponTypes).reduce((acc, { probability }) => acc + probability, 0)
     const random = Math.floor(Math.random() * totalProbability)
@@ -20,7 +21,7 @@ const equips = {
       cumulativeProbability += probability
       if (random < cumulativeProbability) {
         // 根据装备品质调整装备属性值
-        const qualityMultiplier = { info: 1.2, success: 2, primary: 3, purple: 5, warning: 7, danger: 10 }
+        const qualityMultiplier = { info: 1.2, success: 2, primary: 3, purple: 5, warning: 7, danger: 10, pink: 15 }
         const multiplier = qualityMultiplier[quality]
         const dodge = ['accessory', 'sutra'].includes(type) ? this.equip_Criticalhitrate(lv) : 0
         const attack = ['weapon', 'accessory', 'sutra'].includes(type)
@@ -86,7 +87,11 @@ const equips = {
       '赤焰凤凰剑', '血玉红莲枪', '烈焰焚天弓', '赤霄神火戟', '火舞流云扇',
       '朱雀炎翼鞭', '赤龙焚世刃', '炎狱魔瞳镰', '炽血星辰杖', '红莲业火轮'
     ]
-    return this.drawPrize(lv, 'weapon', names_a, names_b, names_c, names_d, names_e, names_f, isNewbie)
+    const names_g = [
+      '鸿蒙造化剑', '混沌太初枪', '仙界镇魂弓', '万古归墟扇', '洪荒天命笛',
+      '太虚无极鞭', '鸿蒙圣灵刃', '仙界渡世杖', '混沌轮回轮', '鸿蒙万法塔'
+    ]
+    return this.drawPrize(lv, 'weapon', names_a, names_b, names_c, names_d, names_e, names_f, isNewbie, names_g)
   },
   // prettier-ignore
   equip_Armors(lv, isNewbie = false) {
@@ -114,7 +119,11 @@ const equips = {
       '烈焰红莲战甲', '赤霄火凤云裳', '朱雀焚天织锦', '赤焰龙鳞宝衣', '血色蔷薇华服',
       '丹霞流光长袍', '炎阳炽烈战袍', '炽火红莲披风', '火舞凤凰羽衣', '红莲业火锦衣'
     ]
-    return this.drawPrize(lv, 'armor', names_a, names_b, names_c, names_d, names_e, names_f, isNewbie)
+    const names_g = [
+      '鸿蒙紫绶仙衣', '混沌太极道袍', '仙界琉璃金甲', '万古不灭羽衣', '洪荒造化云裳',
+      '太虚玄天战铠', '鸿蒙混元锦衣', '仙界九霄霞帔', '混沌无极仙甲', '鸿蒙归墟法袍'
+    ]
+    return this.drawPrize(lv, 'armor', names_a, names_b, names_c, names_d, names_e, names_f, isNewbie, names_g)
   },
   // prettier-ignore
   equip_Accessorys(lv, isNewbie = false) {
@@ -142,7 +151,11 @@ const equips = {
       '赤焰凤凰翎', '血珀琉璃坠', '烈焰红宝石链', '朱雀之翼耳环', '红莲业火镯',
       '丹霄火凤戒', '玛瑙赤焰项链', '炽天使之泪珮', '绯红织锦手环', '火凤涅槃珠链'
     ]
-    return this.drawPrize(lv, 'accessory', names_a, names_b, names_c, names_d, names_e, names_f, isNewbie)
+    const names_g = [
+      '鸿蒙造化簪', '混沌太初链', '仙界镇魂镯', '万古归墟坠', '洪荒天命佩',
+      '太虚无极戒', '鸿蒙圣灵环', '仙界渡世珮', '混沌轮回链', '鸿蒙万法珠'
+    ]
+    return this.drawPrize(lv, 'accessory', names_a, names_b, names_c, names_d, names_e, names_f, isNewbie, names_g)
   },
   // prettier-ignore
   equip_Sutras(lv, isNewbie = false) {
@@ -170,7 +183,11 @@ const equips = {
       '炽焰灵珠阵图', '火凤涅槃炉鼎', '红莲业火净世碑', '血玉轮回盘', '朱雀翔天翼',
       '烈焰焚天炉', '丹霄火域图', '赤龙炼魂珠', '火灵炽心镜', '九转炎灵祭坛'
     ]
-    return this.drawPrize(lv, 'sutra', names_a, names_b, names_c, names_d, names_e, names_f, isNewbie)
+    const names_g = [
+      '鸿蒙造化鼎', '混沌太初瓶', '仙界镇魂镜', '万古归尘印', '洪荒天命轮',
+      '太虚无极尺', '鸿蒙圣灵炉', '仙界渡世莲', '混沌轮回盘', '鸿蒙万法钟'
+    ]
+    return this.drawPrize(lv, 'sutra', names_a, names_b, names_c, names_d, names_e, names_f, isNewbie, names_g)
   },
   equip_Attack(lv) {
     return this.getRandomInt(10, 50) * lv

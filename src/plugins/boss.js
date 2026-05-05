@@ -8,9 +8,9 @@ const boss = {
     // 防御
     const defense = this.getRandomInt(1000, 10000) * lv
     // 闪避
-    const dodge = this.getRandomFloatInRange(0.1, 0.8)
+    const dodge = this.getRandomFloatInRange(0.05, 0.4)
     // 暴击
-    const critical = this.getRandomFloatInRange(0.1, 1)
+    const critical = this.getRandomFloatInRange(0.1, 0.4)
     return {
       name: bossInfo.name,
       text: this.boss_Text(),
@@ -148,11 +148,11 @@ const boss = {
     }
     // 计算评分
     const score =
-      dodge * weights.dodgeRate +
+      dodge * weights.dodgeRate * 100 +
       attack * weights.attack +
       (health / 100) * weights.health +
       defense * weights.defense +
-      critical * weights.critRate
+      critical * weights.critRate * 100
     return Math.floor(score)
   }
 }

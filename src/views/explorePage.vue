@@ -252,13 +252,15 @@
     // 野怪伤害计算
     const monsterAttack = monster.value.attack // 野怪攻击
     const playerDefense = player.value.defense // 玩家防御
-    let monsterHarm = Math.max(0, Math.floor(monsterAttack - playerDefense)) // 野怪伤害
-    monsterHarm = monsterHarm <= 1 ? 1 : monsterHarm // 伤害小于1时强制破防
+    let monsterBaseHarm = Math.max(0, Math.floor(monsterAttack - playerDefense)) // 野怪伤害
+    let monsterMinHarm = Math.max(1, Math.floor(monsterAttack * 0.05)) // 攻击力的5%保底
+    let monsterHarm = Math.max(monsterBaseHarm, monsterMinHarm)
     // 玩家伤害计算
     const playerAttack = player.value.attack // 玩家攻击
     const monsterDefense = monster.value.defense // 野怪防御
-    let playerHarm = Math.max(0, Math.floor(playerAttack - monsterDefense)) // 玩家伤害基础值
-    playerHarm = playerHarm <= 1 ? 1 : playerHarm // 伤害小于1时强制破防
+    let playerBaseHarm = Math.max(0, Math.floor(playerAttack - monsterDefense)) // 玩家伤害基础值
+    let playerMinHarm = Math.max(1, Math.floor(playerAttack * 0.05)) // 攻击力的5%保底
+    let playerHarm = Math.max(playerBaseHarm, playerMinHarm)
     // 是否暴击
     let isMCritical = false,
       isCritical = false
@@ -276,7 +278,7 @@
     // 检查玩家是否暴击
     if (Math.random() < player.value.critical) {
       // 玩家暴击，伤害加倍
-      playerHarm *= 1.5
+      playerHarm *= 2
       // 玩家成功暴击
       isCritical = true
     }
@@ -295,9 +297,10 @@
         player.value.taskNum++
         // 增加培养丹
         const reincarnation = player.value.reincarnation ? 1 + 1 * player.value.reincarnation : 1
-        player.value.props.cultivateDan += reincarnation
+        const danGain = Math.floor(Math.random() * player.value.level + 1) * reincarnation
+        player.value.props.cultivateDan += danGain
         // 发送提示
-        texts.value.push(`击败${monster.value.name}后你获得了${reincarnation}颗培养丹`)
+        texts.value.push(`击败${monster.value.name}后你获得了${danGain}颗培养丹`)
         findTreasure(monster.value.name)
         stopFight()
       } else if (player.value.health <= 0) {
@@ -398,12 +401,14 @@
       // 自动模式下尝试自动出售
       if (isAutoMode.value && autoSellEquipment() && player.value.inventory.length < player.value.backpackCapacity) {
         player.value.inventory.push(equipItem)
+        if (equipItem.quality === 'pink') player.value.pinkEquipCount = (player.value.pinkEquipCount || 0) + 1
       } else {
         texts.value.push(`当前装备背包容量已满, 该装备自动丢弃, 转生可增加背包容量`)
       }
     } else {
       // 玩家获得道具
       player.value.inventory.push(equipItem)
+      if (equipItem.quality === 'pink') player.value.pinkEquipCount = (player.value.pinkEquipCount || 0) + 1
     }
     // 如果没有满级
     if (player.value.level < maxLv) {
@@ -426,7 +431,8 @@
           // 更新气血
           player.value.health = player.value.maxHealth
           // 增加玩家总修为
-          player.value.maxCultivation = Math.floor(100 * Math.pow(2, player.value.level))
+          const reincarnation = player.value.reincarnation ? player.value.reincarnation + 1 : 1
+          player.value.maxCultivation = Math.floor(100 * Math.pow(2, player.value.level) * reincarnation)
           texts.value.push(`恭喜你突破了！当前境界：${levelNames(player.value.level)}`)
         } else {
           // 当前修为
@@ -436,7 +442,8 @@
         isStop.value = false
         isStart.value = false
         player.value.level = maxLv
-        player.value.maxCultivation = Math.floor(100 * Math.pow(2, maxLv))
+        const reincarnationMax = player.value.reincarnation ? player.value.reincarnation + 1 : 1
+        player.value.maxCultivation = Math.floor(100 * Math.pow(2, maxLv) * reincarnationMax)
         texts.value.push('你当前的境界已修炼圆满, 需要转生后才能继续修炼')
       }
     }
@@ -557,7 +564,7 @@
     // 基础100%几率
     const baseRate = 100
     // 每升一级减少的基础几率
-    const decayFactor = 0.98
+    const decayFactor = 0.985
     // 根据等级计算实际几率
     let captureRate = baseRate * Math.pow(decayFactor, player.value.level)
     // 确保几率在 0% 到 100% 之间

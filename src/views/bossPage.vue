@@ -35,7 +35,7 @@
   const texts = ref([])
   const player = ref(store.player)
   const timerIds = ref([])
-  const currency = ref(boss.getRandomInt(1, 10))
+  const currency = ref(boss.getRandomInt(10, 30))
   const isFighting = ref(false)
   const startFight = ref(false)
   const isequipment = ref(false)
@@ -108,13 +108,15 @@
     // boss伤害计算
     const monsterAttack = store.boss.attack // boss攻击
     const playerDefense = player.value.defense // 玩家防御
-    let monsterHarm = Math.max(0, Math.floor(monsterAttack - playerDefense)) // boss伤害
-    monsterHarm = monsterHarm <= 1 ? 1 : monsterHarm // 伤害小于1时强制破防
+    let monsterBaseHarm = Math.max(0, Math.floor(monsterAttack - playerDefense)) // boss伤害
+    let monsterMinHarm = Math.max(1, Math.floor(monsterAttack * 0.05)) // 攻击力的5%保底
+    let monsterHarm = Math.max(monsterBaseHarm, monsterMinHarm)
     // 玩家伤害计算
     const playerAttack = player.value.attack // 玩家攻击
     const monsterDefense = store.boss.defense // boss防御
-    let playerHarm = Math.max(0, Math.floor(playerAttack - monsterDefense)) // 玩家伤害基础值
-    playerHarm = playerHarm <= 1 ? 1 : playerHarm // 伤害小于1时强制破防
+    let playerBaseHarm = Math.max(0, Math.floor(playerAttack - monsterDefense)) // 玩家伤害基础值
+    let playerMinHarm = Math.max(1, Math.floor(playerAttack * 0.05)) // 攻击力的5%保底
+    let playerHarm = Math.max(playerBaseHarm, playerMinHarm)
     // 是否暴击
     let isMCritical = false,
       isCritical = false
@@ -132,7 +134,7 @@
     // 检查玩家是否暴击
     if (Math.random() < player.value.critical) {
       // 玩家暴击，伤害加倍
-      playerHarm *= 1.5
+      playerHarm *= 2
       // 玩家成功暴击
       isCritical = true
     }
@@ -159,11 +161,18 @@
         if (player.value.inventory.length >= player.value.backpackCapacity)
           texts.value.push(`当前装备背包容量已满, 该装备自动丢弃, 转生可增加背包容量`)
         // 玩家获得道具
-        else player.value.inventory.push(equipItem)
+        else {
+          player.value.inventory.push(equipItem)
+          if (equipItem.quality === 'pink') player.value.pinkEquipCount = (player.value.pinkEquipCount || 0) + 1
+        }
         // 增加悟性丹
-        player.value.props.rootBone += 1
+        const r = player.value.reincarnation || 0
+        const rootGain = r > 0
+          ? Math.floor(Math.random() * (r * 4 + 1)) + 1
+          : Math.floor(Math.random() * 3) + 1
+        player.value.props.rootBone += rootGain
         // 获得悟性丹通知
-        texts.value.push('你获得了1颗悟性丹')
+        texts.value.push(`你获得了${rootGain}颗悟性丹`)
         // 增加鸿蒙石
         player.value.props.currency += currency.value
         // 获得鸿蒙石通知

@@ -72,6 +72,9 @@
             <el-icon>
               <Warning />
             </el-icon>
+            <el-button size="small" type="warning" @click="exchangePoints" style="margin-left: 8px" :disabled="player.props.money < 10000">
+              灵石兑换
+            </el-button>
           </div>
           <div class="tag attribute" @click="gameNotifys({ title: '获得方式', message: '每转生一次可以增加50容量' })">
             背包容量: {{ player?.inventory?.length }} / {{ player.backpackCapacity }}
@@ -357,7 +360,7 @@
             <el-tab-pane label="道侣" name="wife">
               <div class="inventory-content">
                 <template v-for="(item, index) in player.wifes" :key="index">
-                  <tag class="inventory-item" @click="wifeItemInfo(item)">
+                  <tag class="inventory-item" closable @close="wifeClose(index)" @click="wifeItemInfo(item)">
                     {{ item.name }}
                   </tag>
                 </template>
@@ -428,7 +431,7 @@
             >
               拥有情缘点: {{ formatNumberToChineseUnit(player.props.qingyuan) }}
             </div>
-            <div class="tag attribute">升级消耗: {{ player.wife.level * 10 }}</div>
+            <div class="tag attribute">升级消耗: {{ player.wife.level * 2 }}</div>
           </div>
         </div>
         <div class="click-box">
@@ -988,6 +991,7 @@
         <el-divider>金手指</el-divider>
         <el-switch v-model="player.keepExcessKills" active-text="击杀溢出保留" style="margin-bottom: 10px; display: block" />
         <el-switch v-model="player.autoOnlineGift" active-text="自动领取在线礼包(1分钟)" style="margin-bottom: 10px; display: block" />
+        <el-switch v-model="destroyProtection" active-text="炼器失败不销毁装备(仍需炼器石)" style="margin-bottom: 10px; display: block" />
         <el-divider>其他相关</el-divider>
         <el-button class="dialog-footer-button" @click="sellingEquipmentBox">批量处理</el-button>
         <el-button type="primary" class="dialog-footer-button" @click="copyContent('qq')">官方群聊</el-button>
@@ -1127,6 +1131,7 @@
   import equipAll from '@/plugins/equipAll'
   // 成就
   import achievement from '@/plugins/achievement'
+  import { checkAchievements } from '@/plugins/achievementChecker'
   import equipTooltip from '@/components/equipTooltip.vue'
   import { ElMessageBox } from 'element-plus'
   import { useMainStore } from '@/plugins/store'
@@ -1144,7 +1149,7 @@
 
   const store = useMainStore()
   const router = useRouter()
-  const ver = ref('1.2.2')
+  const ver = ref('2.0.0')
   // 错误信息
   const err = ref('')
   const show = ref(false)
@@ -1164,6 +1169,8 @@
   const protect = ref(false)
   // 炼器增幅
   const increase = ref(false)
+  // 失败不销毁
+  const destroyProtection = ref(false)
   // 修改昵称
   const editName = ref(false)
   const levelsNum = ref({
@@ -1179,7 +1186,7 @@
   const newBieBox = ref(false)
   const storyText = ref('')
   // 商店商品价格
-  const shopPrice = ref(100)
+  const shopPrice = ref(50)
   // 新手礼包数据
   const newBieData = ref([])
   const shopActive = ref('weapon')
@@ -1240,6 +1247,9 @@
   onMounted(() => {
     achievementAll.value = achievement.all()
     illustrationsItems.value = equipAll.drawPrize(maxLv)
+    // 检查所有成就（钓鱼/装备等可能在其他页面更新）
+    checkAchievements(player.value, 'monster')
+    checkAchievements(player.value, 'equipment', player.value)
     startGame()
   })
 
@@ -1754,7 +1764,7 @@
     }
     // 炼器确认弹窗
     ElMessageBox.confirm(
-      item.strengthen >= 15 && !protect.value
+      item.strengthen >= 15 && !protect.value && !destroyProtection.value
         ? `当前装备炼器等级已达到+${item.strengthen}, 如果炼器失败该装备会销毁, 请问还需要炼器吗?`
         : '你确定要炼器吗?',
       '炼器提示',
@@ -1806,8 +1816,8 @@
             position: 'top-left'
           })
         } else {
-          // 如果炼器等级等于或大于15级并且未开启炼器保护
-          if (item.strengthen >= 15 && !protect.value) {
+          // 如果炼器等级等于或大于15级并且未开启炼器保护且未开启失败不销毁
+          if (item.strengthen >= 15 && !protect.value && !destroyProtection.value) {
             // 移除销毁当前装备
             player.value.equipment[item.type] = {}
             // 扣除已销毁装备增加的属性
@@ -1820,13 +1830,13 @@
           // 发送炼器失败通知
           gameNotifys({
             title: '炼器提示',
-            message: item.strengthen >= 15 && !protect.value ? '炼器失败, 装备已自动销毁' : '炼器失败',
+            message: item.strengthen >= 15 && !protect.value && !destroyProtection.value ? '炼器失败, 装备已自动销毁' : '炼器失败',
             position: 'top-left',
             type: 'error'
           })
         }
         // 扣除炼器石
-        player.value.props.strengtheningStone -= calculate
+        player.value.props.strengtheningStone -= calculateCost
       })
       .catch(() => {})
   }
@@ -1932,11 +1942,11 @@
           player.value.props.rootBone -= item.rootBone
         } else {
           // 攻击
-          attack = Math.floor(item.initial.attack * 0.05)
+          attack = Math.floor(item.initial.attack * 1.0)
           // 血量
-          health = Math.floor(item.initial.health * 0.05)
+          health = Math.floor(item.initial.health * 1.0)
           // 防御
-          defense = Math.floor(item.initial.defense * 0.05)
+          defense = Math.floor(item.initial.defense * 1.0)
         }
         // 如果勾选了转生并且当前等级已满
         if (petReincarnation.value && item.level >= maxLv) {
@@ -1984,7 +1994,7 @@
   // 道侣升级
   const wifeUpgrade = item => {
     // 计算道侣升级所需材料数量
-    const consume = item.level * 10
+    const consume = item.level * 2
     // 如果情缘点不足
     if (consume > player.value.props.qingyuan) {
       // 发送通知
@@ -2026,11 +2036,8 @@
 
   // 计算灵宠升级所需消耗
   const petConsumption = lv => {
-    // 是否勾选转生选项
-    const cost = petReincarnation.value ? 10 : 1
-    // 转生次数
-    const reincarnation = player.value.pet.reincarnation ? lv * 200 : 1
-    return (lv * 200 + reincarnation) * cost
+    const multiplier = player.value.pet.reincarnation ? 2 : 1
+    return lv * 50 * multiplier
   }
 
   // 购买装备
@@ -2042,7 +2049,10 @@
       if (player.value.inventory.length >= player.value.backpackCapacity)
         storyText.value = `当前装备背包容量已满, 该装备自动丢弃, 转生可增加背包容量`
       // 添加到背包
-      else player.value.inventory.push(item)
+      else {
+        player.value.inventory.push(item)
+        if (item.quality === 'pink') player.value.pinkEquipCount = (player.value.pinkEquipCount || 0) + 1
+      }
       // 跳转背包相关页
       inventoryActive.value = 'equipment'
       equipmentActive.value = item.type
@@ -2078,6 +2088,23 @@
     // 收回当前跟随的道侣
     player.value.wife = {}
     player.value.wifes.push(item)
+  }
+  // 道侣遣散
+  const wifeClose = index => {
+    const item = player.value.wifes[index]
+    if (!item) return
+    ElMessageBox.confirm(`你确定要遣散<span class="el-tag">${item.name}</span>吗?`, '道侣遣散', {
+      center: true,
+      cancelButtonText: '取消',
+      confirmButtonText: '确定遣散',
+      dangerouslyUseHTMLString: true
+    })
+      .then(() => {
+        const name = player.value.wifes[index]?.name
+        player.value.wifes.splice(index, 1)
+        gameNotifys({ title: '提示', message: `已遣散道侣 ${name}`, position: 'top-left' })
+      })
+      .catch(() => {})
   }
   // 道侣信息
   const wifeItemInfo = item => {
@@ -2214,7 +2241,7 @@
       }
     )
       .then(() => {
-        const num = item.level + Math.floor((item.level * player.value.reincarnation) / 10)
+        const num = Math.floor(item.level * (1 + player.value.reincarnation / 3))
         // 增加炼器石数量
         player.value.props.strengtheningStone += num
         // 删除背包装备
@@ -2403,8 +2430,15 @@
       defense: '防御'
     }
     if (player.value.points > 0) {
-      const num = player.value.reincarnation ? player.value.reincarnation * 10 : 1
-      const numText = type == 'attack' || type == 'defense' ? 300 * num : 600 * num
+      // 获取对应属性的当前值
+      let currentStat
+      if (type === 'attack') currentStat = player.value.attack
+      else if (type === 'defense') currentStat = player.value.defense
+      else currentStat = player.value.maxHealth
+      // 百分比加成: 当前属性值的0.2%, 最低保底为 max(100, 等级×10)
+      const percent = 0.002
+      const minBonus = Math.max(100, player.value.level * 10)
+      const numText = Math.max(minBonus, Math.floor(currentStat * percent))
       // 如果是攻击
       if (type == 'attack') playerAttribute(0, numText, 0, 0, 0)
       // 如果是防御
@@ -2418,6 +2452,23 @@
         message: `加点成功${typeNames[type]}增加了${numText}点`
       })
     }
+  }
+  // 灵石兑换境界点
+  const exchangePoints = () => {
+    if (player.value.props.money < 10000) {
+      gameNotifys({ title: '提示', message: '灵石不足10000' })
+      return
+    }
+    ElMessageBox.confirm('消耗10000灵石兑换1点境界点？', '灵石兑换', {
+      confirmButtonText: '确定兑换',
+      cancelButtonText: '取消'
+    })
+      .then(() => {
+        player.value.props.money -= 10000
+        player.value.points++
+        gameNotifys({ title: '兑换成功', message: '获得1点境界点' })
+      })
+      .catch(() => {})
   }
   // 计算所需修为相差百分比
   const calculatePercentageDifference = (num1, num2) => {
@@ -2483,6 +2534,12 @@
       message = `<p>击败怪物数量: ${item.condition.monstersDefeated}</p>`
     } else if (item.condition.money) {
       message = `<p>累积灵石: ${formatNumberToChineseUnit(item.condition.money)}</p>`
+    } else if (item.condition.fishCount) {
+      message = `<p>累计钓鱼次数: ${item.condition.fishCount}</p>`
+    } else if (item.condition.maxFishWeight) {
+      message = `<p>最大鱼重: ${item.condition.maxFishWeight}斤</p>`
+    } else if (item.condition.pinkEquipCount) {
+      message = `<p>仙阶装备数量: ${item.condition.pinkEquipCount}</p>`
     }
     if (item.desc) {
       message += `<p>描述: ${item.desc}</p>`

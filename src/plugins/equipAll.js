@@ -6,7 +6,7 @@ const All = {
       { type: 'accessory', data: this.equipAccessories() },
       { type: 'sutra', data: this.equipSutras() }
     ]
-    const prize = { info: 50, success: 20, primary: 15, purple: 9, warning: 5, danger: 1, pink: 0 }
+    const prize = { info: 50, success: 20, primary: 15, purple: 9, warning: 5, danger: 1, pink: 0.05 }
     const genre = { sutra: '法器', armor: '护甲', weapon: '兵器', accessory: '灵宝' }
     const quality = Object.keys(prize)
     const getAttribute = (type, lv, attribute, quality) => {
@@ -17,13 +17,13 @@ const All = {
       const Health = 10000 * lv
       const CriticalHitrate = quality == 'pink' ? 0.25 : 0.1
       const attrs = {
-        score: this.calculateEquipmentScore(CriticalHitrate, Attack, Health, CriticalHitrate, CriticalHitrate),
         dodge: ['accessory', 'sutra'].includes(type) ? CriticalHitrate * multiplier : 0,
         attack: ['weapon', 'accessory', 'sutra'].includes(type) ? Math.floor(Attack * multiplier) : 0,
         health: ['armor', 'accessory', 'sutra'].includes(type) ? Math.floor(Health * multiplier) : 0,
         defense: ['armor', 'accessory', 'sutra'].includes(type) ? Math.floor(Attack * multiplier) : 0,
         critical: ['weapon', 'accessory', 'sutra'].includes(type) ? CriticalHitrate * multiplier : 0
       }
+      attrs.score = this.calculateEquipmentScore(attrs.dodge, attrs.attack, attrs.health, attrs.critical, attrs.defense)
       return attrs[attribute]
     }
     return types.map(({ type, data }) => ({

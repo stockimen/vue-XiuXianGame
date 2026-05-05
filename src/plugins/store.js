@@ -91,7 +91,10 @@ export const useMainStore = defineStore('main', {
       checkinStreak: 0,
       lastCheckinDate: null,
       fortuneTellingDate: null,
-      checkedInToday: false
+      checkedInToday: false,
+      fishCount: 0,
+      maxFishWeight: 0,
+      pinkEquipCount: 0
     },
     // 怪物信息
     monster: {
@@ -118,6 +121,7 @@ export const useMainStore = defineStore('main', {
     autoFight: false,
     autoCapture: false,
     autoPathfind: false,
+    autoFishing: false,
     pathfindTarget: null
   }),
   actions: {

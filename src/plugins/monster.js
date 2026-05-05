@@ -31,28 +31,55 @@ const monsters = {
     if (lv <= 144) {
       return this.getRandomInt(50, 150) * lv
     } else {
-      return this.getRandomInt(10000, 50000) * lv
+      const postLv = lv - 144
+      const t = Math.min(postLv / 144, 1)
+      const scaleMin = Math.floor(200 + (10000 - 200) * t)
+      const scaleMax = Math.floor(600 + (50000 - 600) * t)
+      return this.getRandomInt(scaleMin, scaleMax) * lv
     }
   },
   monster_Health(lv) {
     if (lv <= 144) {
       return this.getRandomInt(100, 500) * lv
     } else {
-      return this.getRandomInt(10000, 50000) * lv
+      const postLv = lv - 144
+      const t = Math.min(postLv / 144, 1)
+      const scaleMin = Math.floor(300 + (10000 - 300) * t)
+      const scaleMax = Math.floor(1000 + (50000 - 1000) * t)
+      return this.getRandomInt(scaleMin, scaleMax) * lv
     }
   },
   monster_Defense(lv) {
     if (lv <= 144) {
       return this.getRandomInt(1, 15) * lv
     } else {
-      return this.getRandomInt(500, 1000) * lv
+      const postLv = lv - 144
+      const t = Math.min(postLv / 144, 1)
+      const scaleMin = Math.floor(10 + (500 - 10) * t)
+      const scaleMax = Math.floor(30 + (1000 - 30) * t)
+      return this.getRandomInt(scaleMin, scaleMax) * lv
     }
   },
   monster_Criticalhitrate(lv) {
     if (lv <= 144) {
       return this.getRandomFloatInRange(0.001, 0.01)
     } else {
-      return this.getRandomFloatInRange(0.1, 0.75)
+      const postLv = lv - 144
+      const t = Math.min(postLv / 144, 1)
+      const minRate = 0.02 + (0.1 - 0.02) * t
+      const maxRate = 0.05 + (0.75 - 0.05) * t
+      return this.getRandomFloatInRange(minRate, maxRate)
+    }
+  },
+  monster_Dodge(lv) {
+    if (lv <= 144) {
+      return this.getRandomFloatInRange(0.001, 0.02)
+    } else {
+      const postLv = lv - 144
+      const t = Math.min(postLv / 144, 1)
+      const minRate = 0.01 + (0.05 - 0.01) * t
+      const maxRate = 0.02 + (0.3 - 0.02) * t
+      return this.getRandomFloatInRange(minRate, maxRate)
     }
   },
   getRandomInt(min, max) {
