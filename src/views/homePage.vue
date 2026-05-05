@@ -987,7 +987,7 @@
         <el-button type="warning" class="dialog-footer-button" @click="deleteScriptData">删除脚本</el-button>
         <el-divider>金手指</el-divider>
         <el-switch v-model="player.keepExcessKills" active-text="击杀溢出保留" style="margin-bottom: 10px; display: block" />
-        <el-switch v-model="player.autoOnlineGift" active-text="自动领取在线礼包(10分钟)" style="margin-bottom: 10px; display: block" />
+        <el-switch v-model="player.autoOnlineGift" active-text="自动领取在线礼包(1分钟)" style="margin-bottom: 10px; display: block" />
         <el-divider>其他相关</el-divider>
         <el-button class="dialog-footer-button" @click="sellingEquipmentBox">批量处理</el-button>
         <el-button type="primary" class="dialog-footer-button" @click="copyContent('qq')">官方群聊</el-button>
