@@ -75,6 +75,8 @@
             <el-button size="small" type="warning" @click="exchangePoints" style="margin-left: 8px" :disabled="player.props.money < 10000">
               灵石兑换
             </el-button>
+            <el-slider v-model="exchangeCount" :min="1" :max="Math.max(1, Math.floor(player.props.money / 10000))" style="flex:1; min-width:60px;" />
+            <span style="font-size: 12px;">x{{ exchangeCount }}</span>
           </div>
           <div class="tag attribute" @click="gameNotifys({ title: '获得方式', message: '每转生一次可以增加50容量' })">
             背包容量: {{ player?.inventory?.length }} / {{ player.backpackCapacity }}
@@ -451,6 +453,7 @@
           <el-button type="primary" @click="wifeUpgrade(player.wife)" :disabled="player.wife.level >= maxLv">
             {{ player.wife.level >= maxLv ? '道侣等级已满' : '道侣升级' }}
           </el-button>
+          <el-button type="warning" @click="autoWifeUpgrade" :disabled="autoWifeUpgrading || player.wife.level >= maxLv">一键升级</el-button>
         </div>
       </div>
     </el-drawer>
@@ -483,9 +486,14 @@
           </div>
         </div>
         <div class="click-box">
-          <el-checkbox v-model="petReincarnation" label="灵宠转生" />
-          <el-checkbox v-model="petRootBone" label="提升悟性" />
-          <el-button type="primary" @click="petUpgrade(player.pet)">点击培养</el-button>
+          <div>
+            <el-checkbox v-model="petReincarnation" label="灵宠转生" />
+            <el-checkbox v-model="petRootBone" label="提升悟性" />
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <el-button type="primary" @click="petUpgrade(player.pet)">点击培养</el-button>
+            <el-button type="warning" @click="autoPetUpgrade" :disabled="autoPetUpgrading">一键培养</el-button>
+          </div>
         </div>
       </div>
     </el-drawer>
@@ -1168,7 +1176,8 @@
     levels,
     gameNotifys,
     propItemNames,
-    dropdownTypeObject
+    dropdownTypeObject,
+    getBaseStat
   } from '@/plugins/game'
 
   const store = useMainStore()
@@ -2116,8 +2125,110 @@
       })
       .catch(() => {})
   }
-
-  // 计算灵宠升级所需消耗
+  // 一键道侣升级
+  const autoWifeUpgrading = ref(false)
+  const autoWifeUpgrade = () => {
+    if (autoWifeUpgrading.value) return
+    autoWifeUpgrading.value = true
+    let count = 0
+    const timer = setInterval(() => {
+      const item = player.value.wife
+      if (item.level >= maxLv) {
+        clearInterval(timer)
+        autoWifeUpgrading.value = false
+        gameNotifys({ title: '一键道侣升级', message: `已完成！升级${count}次，道侣等级已满`, position: 'top-left' })
+        return
+      }
+      const consume = item.level * 2
+      if (consume > player.value.props.qingyuan) {
+        clearInterval(timer)
+        autoWifeUpgrading.value = false
+        gameNotifys({ title: '一键道侣升级', message: `已停止！升级${count}次，情缘点不足`, position: 'top-left' })
+        return
+      }
+      const attack = Math.floor(item.attack * 0.1)
+      const health = Math.floor(item.health * 0.1)
+      const defense = Math.floor(item.defense * 0.1)
+      item.level++
+      item.attack += attack
+      item.health += health
+      item.defense += defense
+      playerAttribute(0, attack, health, 0, defense)
+      player.value.props.qingyuan -= consume
+      count++
+    }, 100)
+  }
+  // 一键灵宠培养
+  const autoPetUpgrading = ref(false)
+  const autoPetUpgrade = () => {
+    if (autoPetUpgrading.value) return
+    autoPetUpgrading.value = true
+    let count = 0
+    const timer = setInterval(() => {
+      const item = player.value.pet
+      // 等级满且未勾转生
+      if (!petReincarnation.value && item.level >= maxLv) {
+        clearInterval(timer)
+        autoPetUpgrading.value = false
+        gameNotifys({ title: '一键灵宠培养', message: `已完成！培养${count}次，灵宠境界已满`, position: 'top-left' })
+        return
+      }
+      // 勾了转生但人物转生不够
+      if (petReincarnation.value && player.value.reincarnation < item.reincarnation) {
+        clearInterval(timer)
+        autoPetUpgrading.value = false
+        gameNotifys({ title: '一键灵宠培养', message: `已停止！培养${count}次，灵宠转生不能高于人物转生`, position: 'top-left' })
+        return
+      }
+      // 勾了转生但等级没满
+      if (petReincarnation.value && item.level < maxLv) {
+        // 继续培养升级
+      }
+      // 培养丹不足
+      const consume = petConsumption(item.level)
+      if (consume > player.value.props.cultivateDan) {
+        clearInterval(timer)
+        autoPetUpgrading.value = false
+        gameNotifys({ title: '一键灵宠培养', message: `已停止！培养${count}次，培养丹不足`, position: 'top-left' })
+        return
+      }
+      // 悟性丹不足
+      if (petRootBone.value && player.value.props.rootBone < item.rootBone) {
+        clearInterval(timer)
+        autoPetUpgrading.value = false
+        gameNotifys({ title: '一键灵宠培养', message: `已停止！培养${count}次，悟性丹不足`, position: 'top-left' })
+        return
+      }
+      let attack = 0, health = 0, defense = 0
+      if (petRootBone.value && player.value.props.rootBone >= item.rootBone) {
+        let rootBone = item.initial.rootBone - item.rootBone
+        rootBone = rootBone ? rootBone : 1
+        attack = Math.floor(item.initial.attack * rootBone)
+        health = Math.floor(item.initial.health * rootBone)
+        defense = Math.floor(item.initial.defense * rootBone)
+        item.rootBone++
+        player.value.props.rootBone -= item.rootBone
+      } else {
+        attack = Math.floor(item.initial.attack * 1.0)
+        health = Math.floor(item.initial.health * 1.0)
+        defense = Math.floor(item.initial.defense * 1.0)
+      }
+      if (petReincarnation.value && item.level >= maxLv) {
+        item.level = 1
+        petReincarnation.value = false
+        item.reincarnation++
+      } else {
+        item.level++
+      }
+      item.attack += attack
+      item.health += health
+      item.defense += defense
+      playerAttribute(0, attack, health, 0, defense)
+      item.score = equip.calculateEquipmentScore(item.dodge, item.attack, item.health, item.critical, item.defense)
+      player.value.props.cultivateDan -= consume
+      count++
+    }, 100)
+  }
   const petConsumption = lv => {
     const multiplier = player.value.pet.reincarnation ? 2 : 1
     return lv * 50 * multiplier
@@ -2521,9 +2632,9 @@
     if (player.value.points > 0) {
       // 获取对应属性的当前值
       let currentStat
-      if (type === 'attack') currentStat = player.value.attack
-      else if (type === 'defense') currentStat = player.value.defense
-      else currentStat = player.value.maxHealth
+      if (type === 'attack') currentStat = getBaseStat(player.value, 'attack')
+      else if (type === 'defense') currentStat = getBaseStat(player.value, 'defense')
+      else currentStat = getBaseStat(player.value, 'maxHealth')
       // 百分比加成: 当前属性值的0.2%, 最低保底为 max(100, 等级×10)
       const percent = 0.002
       const minBonus = Math.max(100, player.value.level * 10)
@@ -2560,19 +2671,23 @@
     }
   }
   // 灵石兑换境界点
+  const exchangeCount = ref(1)
   const exchangePoints = () => {
-    if (player.value.props.money < 10000) {
-      gameNotifys({ title: '提示', message: '灵石不足10000' })
+    const count = exchangeCount.value
+    const totalCost = count * 10000
+    if (player.value.props.money < totalCost) {
+      gameNotifys({ title: '提示', message: `灵石不足${totalCost}` })
       return
     }
-    ElMessageBox.confirm('消耗10000灵石兑换1点境界点？', '灵石兑换', {
+    ElMessageBox.confirm(`消耗${totalCost}灵石兑换${count}点境界点？`, '灵石兑换', {
       confirmButtonText: '确定兑换',
       cancelButtonText: '取消'
     })
       .then(() => {
-        player.value.props.money -= 10000
-        player.value.points++
-        gameNotifys({ title: '兑换成功', message: '获得1点境界点' })
+        player.value.props.money -= totalCost
+        player.value.points += count
+        gameNotifys({ title: '兑换成功', message: `获得${count}点境界点` })
+        exchangeCount.value = 1
       })
       .catch(() => {})
   }
@@ -2764,6 +2879,14 @@
 </script>
 
 <style scoped>
+  .attributes {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: inherit;
+    padding: 8px 0;
+  }
+
   .index-box {
     margin-top: 15px;
   }

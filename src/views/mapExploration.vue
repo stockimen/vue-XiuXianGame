@@ -1271,7 +1271,7 @@
     const random = Math.random()
     let cumulativeProbability = 0
     // 斤数: 偏态分布，大鱼稀有 (50%≤7斤, 75%≤15斤, 95%≤27斤)
-    const weight = Math.floor(Math.pow(Math.random(), 0.5) * 30) + 1
+    const weight = parseFloat((Math.pow(Math.random(), 0.5) * 29 + 1).toFixed(2))
     const fishList = [
       { name: '金鳞鲤鱼', price: 100, description: '金色鳞片的鲤鱼，象征着好运和财富。', probability: 0.25 },
       { name: '青铜鲑鱼', price: 150, description: '体型健硕的鲑鱼，常出现在清凉的河流中。', probability: 0.2 },

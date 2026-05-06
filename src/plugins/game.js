@@ -101,3 +101,13 @@ export const smoothScrollToBottom = element => {
   const easeInOutCubic = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
   window.requestAnimationFrame(scroll)
 }
+
+// 计算玩家基础属性（不含装备/灵宠/道侣加成）
+export const getBaseStat = (player, stat) => {
+  const equip = player.equipment || {}
+  const pet = player.pet || {}
+  const wife = player.wife || {}
+  const equipBonus = Object.values(equip).reduce((sum, eq) => sum + (eq[stat] || 0), 0)
+  const petKey = stat === 'maxHealth' ? 'health' : stat
+  return Math.max(0, (player[stat] || 0) - equipBonus - (pet[petKey] || 0) - (wife[petKey] || 0))
+}
