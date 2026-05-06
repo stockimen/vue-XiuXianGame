@@ -48,7 +48,6 @@
   import { ref, watch, computed, onMounted } from 'vue'
   import { useMainStore } from './plugins/store'
   import { Close } from '@element-plus/icons-vue'
-  import { gameNotifys } from '@/plugins/game'
 
   const player = ref({})
   const route = useRoute()
@@ -65,25 +64,6 @@
   onMounted(() => {
     // 初始化玩家数据
     player.value = useMainStore().player
-    // 离线刷怪结算
-    const now = Date.now()
-    const lastOnline = player.value.lastOnline || player.value.time || 0
-    if (lastOnline > 0) {
-      const offlineMinutes = Math.min(Math.floor((now - lastOnline) / 60000), 720)
-      if (offlineMinutes >= 1) {
-        const kills = offlineMinutes * 3
-        const r = player.value.reincarnation || 0
-        const danPerKill = Math.max(1, Math.floor(player.value.level / 10 * (r + 1)))
-        const cultivateDanReward = kills * danPerKill
-        player.value.props.cultivateDan += cultivateDanReward
-        player.value.taskNum += kills
-        gameNotifys({
-          title: '离线收益',
-          message: `离线${offlineMinutes}分钟，击杀${kills}个怪物，获得${cultivateDanReward}培养丹`
-        })
-      }
-    }
-    player.value.lastOnline = now
     // 页面关闭时保存时间
     window.addEventListener('beforeunload', () => {
       player.value.lastOnline = Date.now()

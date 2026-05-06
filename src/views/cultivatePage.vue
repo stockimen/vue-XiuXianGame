@@ -34,7 +34,7 @@
   import { ref, computed, onUnmounted, onMounted } from 'vue'
   import { useMainStore } from '@/plugins/store'
   import equip from '@/plugins/equip'
-  import { maxLv, smoothScrollToBottom, levelNames, gameNotifys, getBaseStat } from '@/plugins/game'
+  import { maxLv, smoothScrollToBottom, levelNames, gameNotifys } from '@/plugins/game'
   import { ElMessageBox } from 'element-plus'
 
   const store = useMainStore()
@@ -92,7 +92,7 @@
       { type: 'resource', name: '灵石', amount: 100, description: '你发现了一堆灵石！' },
       { type: 'cultivation', name: '顿悟', amount: 500, description: '你突然顿悟，修为大涨！' },
       { type: 'item', name: '丹药', effect: '增加100点修为', description: '你获得了一颗珍贵的丹药！' },
-      { type: 'skill', name: '剑法', effect: '增加10%基础攻击力', description: '你领悟了一门高深剑法！' },
+      { type: 'skill', name: '剑法', effect: '增加5-100点攻击力', description: '你领悟了一门高深剑法！' },
       { type: 'lucky', name: '雷劫', effect: '修为降低10%', description: '你遭遇了雷劫！' }
     ]
     const event = randomEvents[Math.floor(Math.random() * randomEvents.length)]
@@ -114,7 +114,7 @@
         break
       // 增加攻击力
       case 'skill':
-        player.value.attack += Math.max(1, Math.floor(getBaseStat(player.value, 'attack') * 0.1))
+        player.value.attack += Math.floor(Math.random() * 96 + 5)
         break
     }
   }
@@ -133,12 +133,20 @@
     if (player.value.level < maxLv) {
       if (player.value.cultivation >= player.value.maxCultivation) {
         if (player.value.level > 10 && player.value.level > player.value.taskNum) {
-          stopCultivate()
-          isStop.value = false
-          isStart.value = false
-          texts.value.push(
-            `当前境界修为已满, 你需要通过击败<span class="textColor">(${player.value.taskNum} / ${player.value.level})</span>个敌人证道突破`
-          )
+          // 修为满但证道不足，继续修炼随机加属性 (概率1:1:1，数值攻1:防1:血6)
+          const r = player.value.reincarnation ? player.value.reincarnation + 1 : 1
+          const rand = Math.floor(Math.random() * 3)
+          if (rand === 0) {
+            player.value.attack += r
+            texts.value.push(`修为已满，等待证道中...攻击力+${r}`)
+          } else if (rand === 1) {
+            player.value.defense += r
+            texts.value.push(`修为已满，等待证道中...防御+${r}`)
+          } else {
+            player.value.health += r * 6
+            player.value.maxHealth += r * 6
+            texts.value.push(`修为已满，等待证道中...气血+${r * 6}`)
+          }
           return
         }
         player.value.taskNum = player.value.keepExcessKills ? Math.max(0, player.value.taskNum - player.value.level) : 0

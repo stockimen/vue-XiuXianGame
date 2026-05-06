@@ -318,17 +318,6 @@
                 </template>
               </div>
             </el-tab-pane>
-            <el-tab-pane label="灵石商店" name="lingShiShop">
-              <div class="inventory-content">
-                <div v-for="(item, index) in lingShiShopItems" :key="index" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
-                  <tag type="primary">{{ item.name }}</tag>
-                  <span style="font-size: 12px; white-space: nowrap;">{{ item.price }}灵石/个</span>
-                  <el-slider v-model="item.buyCount" :min="1" :max="Math.max(1, Math.floor(player.props.money / item.price))" style="flex: 1; min-width: 100px;" />
-                  <span style="font-size: 12px; white-space: nowrap;">x{{ item.buyCount }}</span>
-                  <el-button size="small" type="primary" @click="buyMaterial(item)">购买</el-button>
-                </div>
-              </div>
-            </el-tab-pane>
             <el-tab-pane label="灵宠" name="pet">
               <el-dropdown trigger="click" @command="petDropdown" v-if="player.pets.length">
                 <span class="el-dropdown-link">
@@ -377,6 +366,17 @@
                     {{ item.name }}
                   </tag>
                 </template>
+              </div>
+            </el-tab-pane>
+            <el-tab-pane label="灵石商店" name="lingShiShop">
+              <div class="inventory-content">
+                <div v-for="(item, index) in lingShiShopItems" :key="index" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
+                  <tag type="primary">{{ item.name }}</tag>
+                  <span style="font-size: 12px; white-space: nowrap;">{{ item.price }}灵石/个</span>
+                  <el-slider v-model="item.buyCount" :min="1" :max="Math.max(1, Math.floor(player.props.money / item.price))" style="flex: 1; min-width: 100px;" />
+                  <span style="font-size: 12px; white-space: nowrap;">x{{ item.buyCount }}</span>
+                  <el-button size="small" type="primary" @click="buyMaterial(item)">购买</el-button>
+                </div>
               </div>
             </el-tab-pane>
             <el-tab-pane label="鸿蒙商店" name="shop">
@@ -1022,6 +1022,7 @@
           <el-switch v-model="player.keepExcessKills" active-text="击杀溢出" />
           <el-switch v-model="player.autoOnlineGift" active-text="在线礼包" />
           <el-switch v-model="player.destroyProtection" active-text="炼器保护" />
+          <el-switch v-model="player.autoSellWhenFull" active-text="满背包自动出售" />
         </div>
 
         <el-divider>其他相关</el-divider>
@@ -1030,6 +1031,25 @@
         <el-button type="success" class="dialog-footer-button" @click="copyContent('url')">开源地址</el-button>
         <el-divider>当前版本为: {{ ver }}</el-divider>
       </div>
+    </el-dialog>
+    <el-dialog title="离线结算" v-model="offlineSettlementShow" width="500px" :close-on-click-modal="false">
+      <div v-if="offlineSettlementShow">
+        <p>离线{{ offlineMinutes }}分钟，击杀{{ offlineKills }}个怪物</p>
+        <div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 8px; margin: 8px 0; font-size: 12px;">
+          <div v-for="(log, i) in offlineLogs" :key="i" v-html="log" style="margin: 2px 0;" />
+        </div>
+        <el-divider>总计</el-divider>
+        <div style="font-size: 13px;">
+          <p>培养丹: +{{ offlineSummary.cultivateDan }}</p>
+          <p>灵石: +{{ offlineSummary.money }}</p>
+          <p>炼器石: +{{ offlineSummary.strengtheningStone }}</p>
+          <p>装备: +{{ offlineSummary.equipment }}件</p>
+          <p>分解: {{ offlineSummary.decomposed }}件</p>
+        </div>
+      </div>
+      <template #footer>
+        <el-button type="primary" @click="offlineSettlementShow = false">确认领取</el-button>
+      </template>
     </el-dialog>
     <el-drawer title="图鉴与成就" v-model="equipAllShow" direction="rtl" class="equipAll">
       <el-tabs v-model="activeName" type="border-card">
@@ -1182,7 +1202,7 @@
 
   const store = useMainStore()
   const router = useRouter()
-  const ver = ref('2.1.1')
+  const ver = ref('2.2.1')
   // 错误信息
   const err = ref('')
   const show = ref(false)
@@ -1192,6 +1212,85 @@
   const boss = ref(store.boss)
   // 玩家属性
   const player = ref(store.player)
+  // 离线结算
+  const offlineSettlementShow = ref(false)
+  const offlineMinutes = ref(0)
+  const offlineKills = ref(0)
+  const offlineLogs = ref([])
+  const offlineSummary = ref({ cultivateDan: 0, money: 0, strengtheningStone: 0, equipment: 0, decomposed: 0 })
+  const simulateOfflineBattles = () => {
+    const now = Date.now()
+    const lastOnline = player.value.lastOnline || player.value.time || 0
+    console.log('[离线结算] lastOnline:', lastOnline, 'now:', now, '差值(分钟):', Math.floor((now - lastOnline) / 60000))
+    if (lastOnline <= 0) return
+    const minutes = Math.min(Math.floor((now - lastOnline) / 60000), 360)
+    if (minutes < 1) return
+    const kills = minutes * 3
+    offlineMinutes.value = minutes
+    offlineKills.value = kills
+    offlineLogs.value = []
+    const summary = { cultivateDan: 0, money: 0, strengtheningStone: 0, equipment: 0, decomposed: 0 }
+    const r = player.value.reincarnation || 0
+    const reincarnation = r + 1
+    const types = ['weapon', 'armor', 'accessory', 'sutra']
+    for (let i = 0; i < kills; i++) {
+      if (!player.value.keepExcessKills || player.value.taskNum < 1080) {
+        player.value.taskNum++
+      }
+      const danGain = Math.max(1, Math.floor(Math.random() * player.value.level + 1) * reincarnation)
+      player.value.props.cultivateDan += danGain
+      summary.cultivateDan += danGain
+      // 装备掉落
+      const type = types[Math.floor(Math.random() * 4)]
+      let equipItem
+      if (type === 'weapon') equipItem = equip.equip_Weapons(player.value.level)
+      else if (type === 'armor') equipItem = equip.equip_Armors(player.value.level)
+      else if (type === 'accessory') equipItem = equip.equip_Accessorys(player.value.level)
+      else equipItem = equip.equip_Sutras(player.value.level)
+      equipItem.id = Date.now() + i
+      summary.equipment++
+      // 背包处理
+      if (player.value.inventory.length >= player.value.backpackCapacity) {
+        if (player.value.sellingEquipmentData.includes(equipItem.quality)) {
+          let lv = equipItem.level + (equipItem.level * r) / 10
+          player.value.props.strengtheningStone += Math.floor(Number(lv) || 0)
+          player.value.props.money += 1
+          summary.strengtheningStone += Math.floor(Number(lv) || 0)
+          summary.money += 1
+          summary.decomposed++
+        } else {
+          summary.decomposed++
+        }
+      } else {
+        player.value.inventory.push(equipItem)
+        if (equipItem.quality === 'pink') player.value.pinkEquipCount = (player.value.pinkEquipCount || 0) + 1
+      }
+      // 修为和升级
+      if (player.value.level < maxLv) {
+        const exp = Math.max(1, Math.floor(player.value.maxCultivation / 100))
+        player.value.cultivation += exp
+        if (player.value.cultivation >= player.value.maxCultivation) {
+          if (player.value.level > 10 && player.value.taskNum < player.value.level) {
+            // 证道阻塞
+          } else {
+            player.value.level++
+            player.value.points += 3
+            player.value.cultivation = 0
+            player.value.maxCultivation = Math.floor(100 * Math.pow(2, player.value.level) * reincarnation)
+            player.value.taskNum = player.value.keepExcessKills ? Math.max(0, player.value.taskNum - player.value.level) : 0
+            offlineLogs.value.push(`<span style="color: #67C23A">突破成功！当前境界：${levelNames(player.value.level)}</span>`)
+          }
+        }
+      }
+    }
+    offlineLogs.value.unshift(`<span style="color: #409EFF">离线${minutes}分钟，共击杀${kills}个怪物</span>`)
+    offlineLogs.value.push(`<span style="color: #E6A23C">总计: +${summary.cultivateDan}培养丹, +${summary.equipment}件装备, 分解${summary.decomposed}件</span>`)
+    offlineSummary.value = summary
+    offlineSettlementShow.value = true
+    player.value.lastOnline = Date.now()
+  }
+  // 进入主页时检查离线收益
+  simulateOfflineBattles()
   const actions = ref([])
   const isLevel = ref(false)
   // 灵宠信息弹窗
@@ -1565,8 +1664,19 @@
       })
       return
     }
-    // 过滤出可以分解的装备
-    const selling = inventory.filter(item => sellingEquipmen.includes(item.quality) && !item.lock)
+    // 保留每种类型中评分最高的装备
+    const keepIds = new Set()
+    if (player.value.keepBestEquipment) {
+      const byType = {}
+      inventory.forEach(item => {
+        if (!byType[item.type] || item.score > byType[item.type].score) {
+          byType[item.type] = item
+        }
+      })
+      Object.values(byType).forEach(item => keepIds.add(item.id))
+    }
+    // 过滤出可以分解的装备（排除保留和锁定的）
+    const selling = inventory.filter(item => sellingEquipmen.includes(item.quality) && !item.lock && !keepIds.has(item.id))
     // 检查是否有可售卖的装备
     if (!selling.length) {
       gameNotifys({
@@ -1587,8 +1697,8 @@
     player.value.props.money += selling.length
     // 增加炼器石数量
     player.value.props.strengtheningStone += strengtheningStoneTotal
-    // 清空背包内所有未锁定装备与选中分解的品阶
-    player.value.inventory = inventory.filter(item => !sellingEquipmen.includes(item.quality) || item.lock)
+    // 清空背包内所有匹配的装备（排除保留和锁定的）
+    player.value.inventory = inventory.filter(item => !sellingEquipmen.includes(item.quality) || item.lock || keepIds.has(item.id))
     gameNotifys({
       title: '背包装备分解提示',
       message: `背包内所有非锁定装备已成功分解, 你获得了${strengtheningStoneTotal}个炼器石和${selling.length}个灵石`
@@ -2879,14 +2989,6 @@
 </script>
 
 <style scoped>
-  .attributes {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background: inherit;
-    padding: 8px 0;
-  }
-
   .index-box {
     margin-top: 15px;
   }

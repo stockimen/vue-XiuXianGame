@@ -294,7 +294,9 @@
       // 野怪气血小于等于0
       if (monster.value.health <= 0) {
         // 增加击杀数量
-        player.value.taskNum++
+        if (!player.value.keepExcessKills || player.value.taskNum < 1080) {
+          player.value.taskNum++
+        }
         // 增加培养丹
         const reincarnation = player.value.reincarnation ? 1 + 1 * player.value.reincarnation : 1
         const danGain = Math.floor(Math.random() * player.value.level + 1) * reincarnation

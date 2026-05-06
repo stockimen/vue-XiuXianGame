@@ -1300,7 +1300,7 @@
       cumulativeProbability += fish.probability
       if (random < cumulativeProbability) {
         // 返回鱼的信息（含斤数和总价）
-        return { ...fish, weight, totalPrice: fish.price * weight }
+        return { ...fish, weight, totalPrice: Math.floor(fish.price * weight) }
       }
     }
     // 如果没有匹配到
