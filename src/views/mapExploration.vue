@@ -1482,7 +1482,7 @@
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     grid-template-rows: auto auto auto;
-    width: 200px;
+    width: 240px;
     margin: 20px auto;
   }
 

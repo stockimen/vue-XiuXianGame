@@ -498,19 +498,25 @@
           :strengthen-info="strengthenInfo"
         />
         <div class="click-box">
-          <el-checkbox v-model="protect" label="炼器保护" />
-          <el-checkbox v-model="increase" label="炼器增幅" />
-          <el-popover
-            trigger="hover"
-            :width="350"
-            content="炼器等级大于等于15级时没有炼器保护，强化失败装备会被销毁"
-            placement="bottom"
-          >
-            <template #reference>
-              <el-button type="primary" @click="enhance(strengthenInfo)">点击炼器</el-button>
-              <el-button type="warning" @click="autoEnhance(strengthenInfo)" :disabled="autoEnhancing">一键炼器</el-button>
-            </template>
-          </el-popover>
+          <div>
+            <el-checkbox v-model="protect" label="炼器保护" />
+            <el-checkbox v-model="increase" label="炼器增幅" />
+            <el-popover
+              trigger="hover"
+              :width="350"
+              content="炼器等级大于等于15级时没有炼器保护，强化失败装备会被销毁"
+              placement="bottom"
+            >
+              <template #reference>
+                <i class="el-icon-question" style="cursor: help; color: #909399;">?</i>
+              </template>
+            </el-popover>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <el-button type="primary" @click="enhance(strengthenInfo)">点击炼器</el-button>
+            <el-button type="warning" @click="autoEnhance(strengthenInfo)" :disabled="autoEnhancing">一键炼器</el-button>
+            
+          </div>
         </div>
       </div>
     </el-drawer>
@@ -1002,10 +1008,14 @@
           <el-button type="danger" class="dialog-footer-button">导入脚本</el-button>
         </el-upload>
         <el-button type="warning" class="dialog-footer-button" @click="deleteScriptData">删除脚本</el-button>
+
         <el-divider>金手指</el-divider>
-        <el-switch v-model="player.keepExcessKills" active-text="击杀溢出保留" style="margin-bottom: 10px; display: block" />
-        <el-switch v-model="player.autoOnlineGift" active-text="自动领取在线礼包(10分钟)" style="margin-bottom: 10px; display: block" />
-        <el-switch v-model="player.destroyProtection" active-text="炼器失败不销毁装备(仍需炼器石)" style="margin-bottom: 10px; display: block" />
+        <div class="switch-grid">
+          <el-switch v-model="player.keepExcessKills" active-text="击杀溢出" />
+          <el-switch v-model="player.autoOnlineGift" active-text="在线礼包" />
+          <el-switch v-model="player.destroyProtection" active-text="炼器保护" />
+        </div>
+
         <el-divider>其他相关</el-divider>
         <el-button class="dialog-footer-button" @click="sellingEquipmentBox">批量处理</el-button>
         <el-button type="primary" class="dialog-footer-button" @click="copyContent('qq')">官方群聊</el-button>
@@ -1163,7 +1173,7 @@
 
   const store = useMainStore()
   const router = useRouter()
-  const ver = ref('2.1.0')
+  const ver = ref('2.1.1')
   // 错误信息
   const err = ref('')
   const show = ref(false)
@@ -2843,9 +2853,17 @@
     margin-top: 10px;
   }
 
-  .click-box button {
+  .click-box > div {
     margin-top: 10px;
-    width: 100%;
+  }
+
+  .click-box .el-checkbox {
+    margin-right: 16px;
+  }
+
+  .click-box button {
+    flex: 1;
+    min-width: 100px;
   }
 
   /* 装备信息 */
@@ -3020,5 +3038,17 @@
   /* 上传按钮 */
   .el-upload {
     width: 100%;
+  }
+
+  .switch-grid {
+    display: flex;
+    flex-wrap: wrap;        /* 允许换行 */
+    gap: 12px;              /* 间距 */
+    align-items: center;
+  }
+
+  /* 每个开关最小宽度，确保不会太拥挤，同时自动伸缩 */
+  .switch-grid .el-switch {
+    flex: 1 1 auto;        
   }
 </style>
