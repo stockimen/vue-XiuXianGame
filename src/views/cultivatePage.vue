@@ -145,7 +145,8 @@
         player.value.level++
         player.value.points += 3
         player.value.health = player.value.maxHealth
-        player.value.maxCultivation = Math.floor(100 * Math.pow(2, player.value.level * reincarnation))
+        player.value.cultivation = 0
+        player.value.maxCultivation = Math.floor(100 * Math.pow(2, player.value.level) * reincarnation)
         texts.value.push(`恭喜你突破了！当前境界：${levelNames(player.value.level)}`)
       } else {
         player.value.cultivation += exp
@@ -154,7 +155,7 @@
       isStop.value = false
       isStart.value = false
       player.value.level = maxLv
-      player.value.maxCultivation = Math.floor(100 * Math.pow(2, maxLv * reincarnation))
+      player.value.maxCultivation = Math.floor(100 * Math.pow(2, maxLv) * reincarnation)
       stopCultivate()
     }
   }

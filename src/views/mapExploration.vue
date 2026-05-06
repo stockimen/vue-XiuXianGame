@@ -174,9 +174,11 @@
           </el-button>
         </div>
         <div class="gift-box" v-if="giftShow">
-          <div class="gift-item" v-for="(item, index) in giftItems" :key="index" @click="giftInfo(item, index)">
-            <tag :type="item.lv">{{ item.name }}</tag>
+          <div class="gift-item" v-for="(item, index) in giftItems" :key="index" style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap;">
+            <tag :type="item.lv" @click="giftInfo(item, index)">{{ item.name }}</tag>
             <span class="gift-name">{{ item.price }}灵石</span>
+            <el-slider v-model="giftCounts[index]" :min="1" :max="Math.max(1, Math.floor(player.props.money / item.price))" style="flex: 1; min-width: 80px;" />
+            <span style="font-size: 12px;">x{{ giftCounts[index] || 1 }}</span>
           </div>
         </div>
       </div>
@@ -245,6 +247,8 @@
   // 地图的大小
   const gridSize = ref(50)
   const giftShow = ref(false)
+  // 赠送数量
+  const giftCounts = ref([1, 1, 1, 1, 1, 1])
   // NPC的数量
   const npcCount = ref(10)
   // 是否正在长按
@@ -621,13 +625,17 @@
 
   // 礼物信息
   const giftInfo = (item, index) => {
+    const count = giftCounts.value[index] || 1
+    const totalCost = item.price * count
+    const totalPlus = item.plus * count
     ElMessageBox.confirm('', '赠送礼物', {
       center: true,
       message: `<div class="monsterinfo">
       <div class="monsterinfo-box">
         <p>名称: ${item.name}</p>
-        <p>价格: ${item.price}</p>
-        <p>增加好感度: ${item.plus}</p>
+        <p>数量: ${count}</p>
+        <p>总价: ${totalCost}灵石</p>
+        <p>增加好感度: ${totalPlus}</p>
       </div>
     </div>`,
       lockScroll: false,
@@ -636,21 +644,21 @@
       dangerouslyUseHTMLString: true
     })
       .then(() => {
-        if (item.price > player.value.props.money) {
+        if (totalCost > player.value.props.money) {
           gameNotifys({ title: '赠送提示', message: '灵石不足, 赠送失败', position: 'top-left' })
           return
         }
         // 扣除灵石数量
-        player.value.props.money -= item.price
+        player.value.props.money -= totalCost
         // 增加好感度
-        npcInfo.value.favorability += item.plus
+        npcInfo.value.favorability += totalPlus
         // 增加传送符
-        player.value.props.flying += item.plus
+        player.value.props.flying += totalPlus
         // 增加情缘点
-        player.value.props.qingyuan += item.plus
+        player.value.props.qingyuan += totalPlus
         gameNotifys({
           title: '赠送提示',
-          message: `赠送成功, ${npcInfo.value.name}对你的好感度增加了, 并赠与了你${item.plus}张传送符和${item.plus}点情缘`,
+          message: `赠送成功, ${npcInfo.value.name}对你的好感度增加了, 并赠与了你${totalPlus}张传送符和${totalPlus}点情缘`,
           position: 'top-left'
         })
       })

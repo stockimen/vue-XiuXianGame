@@ -430,6 +430,8 @@
           player.value.points += 3
           // 更新气血
           player.value.health = player.value.maxHealth
+          // 清零修为
+          player.value.cultivation = 0
           // 增加玩家总修为
           const reincarnation = player.value.reincarnation ? player.value.reincarnation + 1 : 1
           player.value.maxCultivation = Math.floor(100 * Math.pow(2, player.value.level) * reincarnation)

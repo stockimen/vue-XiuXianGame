@@ -35,14 +35,14 @@ const store = useMainStore()
 setInterval(() => {
   if (store.player.autoOnlineGift) {
     const mult = store.player.reincarnation || 1
-    store.player.props.money += 1000 * mult
-    store.player.props.cultivateDan += 1000 * mult
-    store.player.props.strengtheningStone += 1000 * mult
-    store.player.props.qingyuan += 10 * mult
-    store.player.props.flying += 10 * mult
+    store.player.props.money += 10000 * mult
+    store.player.props.cultivateDan += 10000 * mult
+    store.player.props.strengtheningStone += 10000 * mult
+    store.player.props.qingyuan += 100 * mult
+    store.player.props.flying += 100 * mult
     gameNotifys({
       title: '在线礼包',
-      message: `自动领取成功！获得${1000 * mult}灵石、${1000 * mult}培养丹、${1000 * mult}炼器石、${10 * mult}情缘、${10 * mult}传送符`
+      message: `自动领取成功！获得${10000 * mult}灵石、${10000 * mult}培养丹、${10000 * mult}炼器石、${100 * mult}情缘、${100 * mult}传送符`
     })
   }
-}, 60 * 1000)
+}, 10 * 60 * 1000)

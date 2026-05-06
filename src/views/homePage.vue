@@ -316,6 +316,17 @@
                 </template>
               </div>
             </el-tab-pane>
+            <el-tab-pane label="灵石商店" name="lingShiShop">
+              <div class="inventory-content">
+                <div v-for="(item, index) in lingShiShopItems" :key="index" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
+                  <tag type="primary">{{ item.name }}</tag>
+                  <span style="font-size: 12px; white-space: nowrap;">{{ item.price }}灵石/个</span>
+                  <el-slider v-model="item.buyCount" :min="1" :max="Math.max(1, Math.floor(player.props.money / item.price))" style="flex: 1; min-width: 100px;" />
+                  <span style="font-size: 12px; white-space: nowrap;">x{{ item.buyCount }}</span>
+                  <el-button size="small" type="primary" @click="buyMaterial(item)">购买</el-button>
+                </div>
+              </div>
+            </el-tab-pane>
             <el-tab-pane label="灵宠" name="pet">
               <el-dropdown trigger="click" @command="petDropdown" v-if="player.pets.length">
                 <span class="el-dropdown-link">
@@ -374,6 +385,8 @@
                     <Refresh />
                   </el-icon>
                 </span>
+                <span style="margin-left: 12px; font-size: 12px;">购买数量:</span>
+                <el-input-number v-model="shopBuyCount" :min="1" :max="maxShopBuyCount" size="small" style="width: 100px; margin-left: 4px;" />
               </div>
               <el-tabs v-model="shopActive" :stretch="true">
                 <el-tab-pane :label="i.name" :name="i.type" v-for="(i, k) in player.shopData" :key="k">
@@ -495,6 +508,7 @@
           >
             <template #reference>
               <el-button type="primary" @click="enhance(strengthenInfo)">点击炼器</el-button>
+              <el-button type="warning" @click="autoEnhance(strengthenInfo)" :disabled="autoEnhancing">一键炼器</el-button>
             </template>
           </el-popover>
         </div>
@@ -990,8 +1004,8 @@
         <el-button type="warning" class="dialog-footer-button" @click="deleteScriptData">删除脚本</el-button>
         <el-divider>金手指</el-divider>
         <el-switch v-model="player.keepExcessKills" active-text="击杀溢出保留" style="margin-bottom: 10px; display: block" />
-        <el-switch v-model="player.autoOnlineGift" active-text="自动领取在线礼包(1分钟)" style="margin-bottom: 10px; display: block" />
-        <el-switch v-model="destroyProtection" active-text="炼器失败不销毁装备(仍需炼器石)" style="margin-bottom: 10px; display: block" />
+        <el-switch v-model="player.autoOnlineGift" active-text="自动领取在线礼包(10分钟)" style="margin-bottom: 10px; display: block" />
+        <el-switch v-model="player.destroyProtection" active-text="炼器失败不销毁装备(仍需炼器石)" style="margin-bottom: 10px; display: block" />
         <el-divider>其他相关</el-divider>
         <el-button class="dialog-footer-button" @click="sellingEquipmentBox">批量处理</el-button>
         <el-button type="primary" class="dialog-footer-button" @click="copyContent('qq')">官方群聊</el-button>
@@ -1149,7 +1163,7 @@
 
   const store = useMainStore()
   const router = useRouter()
-  const ver = ref('2.0.0')
+  const ver = ref('2.1.0')
   // 错误信息
   const err = ref('')
   const show = ref(false)
@@ -1169,8 +1183,6 @@
   const protect = ref(false)
   // 炼器增幅
   const increase = ref(false)
-  // 失败不销毁
-  const destroyProtection = ref(false)
   // 修改昵称
   const editName = ref(false)
   const levelsNum = ref({
@@ -1764,7 +1776,7 @@
     }
     // 炼器确认弹窗
     ElMessageBox.confirm(
-      item.strengthen >= 15 && !protect.value && !destroyProtection.value
+      item.strengthen >= 15 && !protect.value && !player.value.destroyProtection
         ? `当前装备炼器等级已达到+${item.strengthen}, 如果炼器失败该装备会销毁, 请问还需要炼器吗?`
         : '你确定要炼器吗?',
       '炼器提示',
@@ -1817,7 +1829,7 @@
           })
         } else {
           // 如果炼器等级等于或大于15级并且未开启炼器保护且未开启失败不销毁
-          if (item.strengthen >= 15 && !protect.value && !destroyProtection.value) {
+          if (item.strengthen >= 15 && !protect.value && !player.value.destroyProtection) {
             // 移除销毁当前装备
             player.value.equipment[item.type] = {}
             // 扣除已销毁装备增加的属性
@@ -1830,7 +1842,7 @@
           // 发送炼器失败通知
           gameNotifys({
             title: '炼器提示',
-            message: item.strengthen >= 15 && !protect.value && !destroyProtection.value ? '炼器失败, 装备已自动销毁' : '炼器失败',
+            message: item.strengthen >= 15 && !protect.value && !player.value.destroyProtection ? '炼器失败, 装备已自动销毁' : '炼器失败',
             position: 'top-left',
             type: 'error'
           })
@@ -1839,6 +1851,67 @@
         player.value.props.strengtheningStone -= calculateCost
       })
       .catch(() => {})
+  }
+
+  // 一键炼器
+  const autoEnhancing = ref(false)
+  const enhanceOnce = item => {
+    const cost = calcEnhanceCost(item)
+    if (cost > player.value.props.strengtheningStone || item.strengthen >= 30) return 'stop'
+    player.value.props.strengtheningStone -= cost
+    const success = Math.random() <= calculateEnhanceSuccessRate(item)
+    if (success) {
+      const attack = Math.floor(item.initial.attack * 0.2)
+      const health = Math.floor(item.initial.health * 0.2)
+      const defense = Math.floor(item.initial.defense * 0.2)
+      switch (item.type) {
+        case 'weapon': item.attack += attack; playerAttribute(0, attack, 0, 0, 0); break
+        case 'armor': item.health += health; item.defense += defense; playerAttribute(0, 0, health, 0, defense); break
+        case 'accessory':
+        case 'sutra': item.attack += attack; item.health += health; item.defense += defense; playerAttribute(0, attack, health, 0, defense); break
+      }
+      item.strengthen++
+      item.score = equip.calculateEquipmentScore(item.dodge, item.attack, item.health, item.critical, item.defense)
+    } else {
+      if (item.strengthen >= 15 && !protect.value && !player.value.destroyProtection) {
+        player.value.equipment[item.type] = {}
+        playerAttribute(-item.dodge, -item.attack, -item.health, -item.critical, -item.defense)
+        item.strengthen = 0
+        strengthenShow.value = false
+        return 'destroyed'
+      }
+    }
+    return success ? 'success' : 'fail'
+  }
+  const autoEnhance = item => {
+    if (autoEnhancing.value) return
+    autoEnhancing.value = true
+    let successCount = 0
+    let failCount = 0
+    const timer = setInterval(() => {
+      if (item.strengthen >= 30) {
+        clearInterval(timer)
+        autoEnhancing.value = false
+        gameNotifys({ title: '一键炼器', message: `已完成！成功${successCount}次，失败${failCount}次，装备已满级+30`, position: 'top-left' })
+        return
+      }
+      const cost = calcEnhanceCost(item)
+      if (cost > player.value.props.strengtheningStone) {
+        clearInterval(timer)
+        autoEnhancing.value = false
+        gameNotifys({ title: '一键炼器', message: `已停止！成功${successCount}次，失败${failCount}次，炼器石不足`, position: 'top-left' })
+        return
+      }
+      const result = enhanceOnce(item)
+      if (result === 'success') successCount++
+      else if (result === 'fail') failCount++
+      else if (result === 'destroyed') {
+        clearInterval(timer)
+        autoEnhancing.value = false
+        gameNotifys({ title: '一键炼器', message: `装备已销毁！成功${successCount}次，失败${failCount}次`, position: 'top-left', type: 'error' })
+        return
+      }
+    }, 100)
   }
 
   // 计算炼器所需消耗的道具数量
@@ -2041,24 +2114,29 @@
   }
 
   // 购买装备
+  // 商店购买数量
+  const shopBuyCount = ref(1)
+  const maxShopBuyCount = computed(() => Math.max(1, Math.floor(player.value.props.currency / shopPrice.value)))
   const shopBuy = item => {
-    if (player.value.props.currency >= shopPrice.value) {
-      // 扣除鸿蒙石
-      player.value.props.currency -= shopPrice.value
-      // 如果装备背包当前容量大于等于背包总容量
-      if (player.value.inventory.length >= player.value.backpackCapacity)
-        storyText.value = `当前装备背包容量已满, 该装备自动丢弃, 转生可增加背包容量`
-      // 添加到背包
-      else {
-        player.value.inventory.push(item)
-        if (item.quality === 'pink') player.value.pinkEquipCount = (player.value.pinkEquipCount || 0) + 1
+    const count = shopBuyCount.value
+    const totalCost = shopPrice.value * count
+    if (player.value.props.currency >= totalCost) {
+      player.value.props.currency -= totalCost
+      for (let i = 0; i < count; i++) {
+        if (player.value.inventory.length >= player.value.backpackCapacity) {
+          storyText.value = `当前装备背包容量已满, 多余装备自动丢弃`
+          break
+        }
+        const copy = JSON.parse(JSON.stringify(item))
+        copy.id = Date.now() + i
+        player.value.inventory.push(copy)
+        if (copy.quality === 'pink') player.value.pinkEquipCount = (player.value.pinkEquipCount || 0) + 1
       }
-      // 跳转背包相关页
       inventoryActive.value = 'equipment'
       equipmentActive.value = item.type
       gameNotifys({
         title: '购买提示',
-        message: `您成功花费${shopPrice.value}鸿蒙石购买${item.name}`
+        message: `您成功花费${totalCost}鸿蒙石购买${count}件${item.name}`
       })
     } else {
       gameNotifys({ title: '购买提示', message: '购买失败, 鸿蒙石不足' })
@@ -2128,11 +2206,12 @@
   }
   // 商店装备信息
   const shopItemInfo = item => {
+    shopBuyCount.value = 1
     ElMessageBox.confirm('', item.name, {
       center: true,
       message: `<div class="monsterinfo">
       <div class="monsterinfo-box">
-      <p>价格: ${shopPrice.value}鸿蒙石</p>
+      <p>价格: ${shopPrice.value}鸿蒙石/件</p>
       <p>类型: ${genre[item.type]}</p>
       <p>境界: ${levelNames(item.level)}</p>
       <p>品质: ${levels[item.quality]}</p>
@@ -2451,6 +2530,23 @@
         title: '加点提示',
         message: `加点成功${typeNames[type]}增加了${numText}点`
       })
+    }
+  }
+  // 灵石商店
+  const lingShiShopItems = ref([
+    { name: '培养丹', key: 'cultivateDan', price: 1000, buyCount: 1 },
+    { name: '炼器石', key: 'strengtheningStone', price: 500, buyCount: 1 },
+    { name: '情缘', key: 'qingyuan', price: 100, buyCount: 1 },
+    { name: '传送符', key: 'flying', price: 100, buyCount: 1 }
+  ])
+  const buyMaterial = item => {
+    const totalCost = item.price * item.buyCount
+    if (player.value.props.money >= totalCost) {
+      player.value.props.money -= totalCost
+      player.value.props[item.key] += item.buyCount
+      gameNotifys({ title: '购买成功', message: `花费${totalCost}灵石购买了${item.buyCount}个${item.name}` })
+    } else {
+      gameNotifys({ title: '购买失败', message: '灵石不足' })
     }
   }
   // 灵石兑换境界点
@@ -2906,7 +3002,7 @@
       width: 60% !important;
     }
 
-    .el-popper {
+    .el-popper:not(.el-dropdown__popper):not(.el-select__popper) {
       display: none;
     }
   }

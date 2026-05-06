@@ -76,6 +76,7 @@ export const useMainStore = defineStore('main', {
       keepBestPet: false,
       keepExcessKills: false,
       autoOnlineGift: false,
+      destroyProtection: false,
       highestTowerFloor: 1,
       rewardedTowerFloors: [],
       nextGameTimes: {
@@ -94,7 +95,8 @@ export const useMainStore = defineStore('main', {
       checkedInToday: false,
       fishCount: 0,
       maxFishWeight: 0,
-      pinkEquipCount: 0
+      pinkEquipCount: 0,
+      lastOnline: 0
     },
     // 怪物信息
     monster: {
