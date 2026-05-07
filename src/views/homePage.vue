@@ -313,7 +313,7 @@
                     class="inventory-item"
                     @click="gameNotifys({ title: '获得方式', message: propItemNames[item.name].desc })"
                   >
-                    {{ propItemNames[item.name].name }}({{ item.num }})
+                    {{ propItemNames[item.name].name }}({{ Math.floor(item.num) }})
                   </tag>
                 </template>
               </div>
@@ -370,12 +370,22 @@
             </el-tab-pane>
             <el-tab-pane label="灵石商店" name="lingShiShop">
               <div class="inventory-content">
-                <div v-for="(item, index) in lingShiShopItems" :key="index" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
+                <div style="font-weight: bold; font-size: 13px; margin-bottom: 8px;">购买</div>
+                <div v-for="(item, index) in lingShiShopItems" :key="'buy-'+index" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
                   <tag type="primary">{{ item.name }}</tag>
                   <span style="font-size: 12px; white-space: nowrap;">{{ item.price }}灵石/个</span>
                   <el-slider v-model="item.buyCount" :min="1" :max="Math.max(1, Math.floor(player.props.money / item.price))" style="flex: 1; min-width: 100px;" />
                   <span style="font-size: 12px; white-space: nowrap;">x{{ item.buyCount }}</span>
                   <el-button size="small" type="primary" @click="buyMaterial(item)">购买</el-button>
+                </div>
+                <el-divider />
+                <div style="font-weight: bold; font-size: 13px; margin-bottom: 8px;">出售(5折)</div>
+                <div v-for="(item, index) in lingShiShopItems" :key="'sell-'+index" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
+                  <tag type="warning">{{ item.name }}</tag>
+                  <span style="font-size: 12px; white-space: nowrap;">{{ item.sellPrice }}灵石/个 | 拥有: {{ Math.floor(player.props[item.key]) }}</span>
+                  <el-slider v-model="item.sellCount" :min="1" :max="Math.max(1, Math.floor(player.props[item.key]))" style="flex: 1; min-width: 100px;" />
+                  <span style="font-size: 12px; white-space: nowrap;">x{{ item.sellCount }}</span>
+                  <el-button size="small" type="danger" @click="sellMaterial(item)">出售</el-button>
                 </div>
               </div>
             </el-tab-pane>
@@ -453,7 +463,7 @@
           <el-button type="primary" @click="wifeUpgrade(player.wife)" :disabled="player.wife.level >= maxLv">
             {{ player.wife.level >= maxLv ? '道侣等级已满' : '道侣升级' }}
           </el-button>
-          <el-button type="warning" @click="autoWifeUpgrade" :disabled="autoWifeUpgrading || player.wife.level >= maxLv">一键升级</el-button>
+          <el-button :type="autoWifeUpgradeTimer ? 'danger' : 'warning'" @click="autoWifeUpgradeTimer ? stopAutoWifeUpgrade() : autoWifeUpgrade()" :disabled="player.wife.level >= maxLv">{{ autoWifeUpgradeTimer ? '停止升级' : '一键升级' }}</el-button>
         </div>
       </div>
     </el-drawer>
@@ -492,7 +502,7 @@
           </div>
           <div style="display: flex; gap: 8px;">
             <el-button type="primary" @click="petUpgrade(player.pet)">点击培养</el-button>
-            <el-button type="warning" @click="autoPetUpgrade" :disabled="autoPetUpgrading">一键培养</el-button>
+            <el-button :type="autoPetUpgradeTimer ? 'danger' : 'warning'" @click="autoPetUpgradeTimer ? stopAutoPetUpgrade() : autoPetUpgrade()">{{ autoPetUpgradeTimer ? '停止培养' : '一键培养' }}</el-button>
           </div>
         </div>
       </div>
@@ -522,7 +532,7 @@
           </div>
           <div style="display: flex; gap: 8px; align-items: center;">
             <el-button type="primary" @click="enhance(strengthenInfo)">点击炼器</el-button>
-            <el-button type="warning" @click="autoEnhance(strengthenInfo)" :disabled="autoEnhancing">一键炼器</el-button>
+            <el-button :type="autoEnhanceTimer ? 'danger' : 'warning'" @click="autoEnhanceTimer ? stopAutoEnhance() : autoEnhance(strengthenInfo)">{{ autoEnhanceTimer ? '停止炼器' : '一键炼器' }}</el-button>
             
           </div>
         </div>
@@ -1032,9 +1042,9 @@
         <el-divider>当前版本为: {{ ver }}</el-divider>
       </div>
     </el-dialog>
-    <el-dialog title="离线结算" v-model="offlineSettlementShow" width="500px" :close-on-click-modal="false">
+    <el-dialog title="离线结算" v-model="offlineSettlementShow" width="500px" :close-on-click-modal="false" :show-close="!offlinePlaying">
       <div v-if="offlineSettlementShow">
-        <p>离线{{ offlineMinutes }}分钟，击杀{{ offlineKills }}个怪物</p>
+        <p>离线{{ offlineMinutes }}分钟，击杀{{ offlineKills }}个怪物<span v-if="offlinePlaying" style="color: #E6A23C;"> (回放中...)</span></p>
         <div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 8px; margin: 8px 0; font-size: 12px;">
           <div v-for="(log, i) in offlineLogs" :key="i" v-html="log" style="margin: 2px 0;" />
         </div>
@@ -1048,7 +1058,8 @@
         </div>
       </div>
       <template #footer>
-        <el-button type="primary" @click="offlineSettlementShow = false">确认领取</el-button>
+        <el-button v-if="offlinePlaying" type="warning" @click="skipOfflineAnimation">跳过动画</el-button>
+        <el-button type="primary" @click="offlineSettlementShow = false" :disabled="offlinePlaying">确认领取</el-button>
       </template>
     </el-dialog>
     <el-drawer title="图鉴与成就" v-model="equipAllShow" direction="rtl" class="equipAll">
@@ -1202,7 +1213,7 @@
 
   const store = useMainStore()
   const router = useRouter()
-  const ver = ref('2.2.1')
+  const ver = ref('2.2.2')
   // 错误信息
   const err = ref('')
   const show = ref(false)
@@ -1217,11 +1228,36 @@
   const offlineMinutes = ref(0)
   const offlineKills = ref(0)
   const offlineLogs = ref([])
+  const offlinePlaying = ref(false)
+  const offlineProgressKills = ref(0)
+  const offlinePlayTimer = ref(null)
   const offlineSummary = ref({ cultivateDan: 0, money: 0, strengtheningStone: 0, equipment: 0, decomposed: 0 })
+  const offlineFinalSummary = ref({ cultivateDan: 0, money: 0, strengtheningStone: 0, equipment: 0, decomposed: 0 })
+  // 纯数据版分解（无UI交互），复用 autoSellEquipment 的核心逻辑
+  const decomposeInventory = () => {
+    const selling = player.value.sellingEquipmentData
+    if (!selling.length) return { stone: 0, money: 0 }
+    const inventory = player.value.inventory
+    const keepIds = new Set()
+    if (player.value.keepBestEquipment) {
+      const byType = {}
+      inventory.forEach(item => {
+        if (!byType[item.type] || item.score > byType[item.type].score) byType[item.type] = item
+      })
+      Object.values(byType).forEach(item => keepIds.add(item.id))
+    }
+    const toSell = inventory.filter(item => selling.includes(item.quality) && !item.lock && !keepIds.has(item.id))
+    if (!toSell.length) return { stone: 0, money: 0 }
+    const stone = toSell.reduce((total, i) => {
+      let lv = i.level + (i.level * player.value.reincarnation) / 10
+      return total + Math.floor(Number(lv) || 0)
+    }, 0)
+    player.value.inventory = inventory.filter(item => !selling.includes(item.quality) || item.lock || keepIds.has(item.id))
+    return { stone, money: toSell.length }
+  }
   const simulateOfflineBattles = () => {
     const now = Date.now()
     const lastOnline = player.value.lastOnline || player.value.time || 0
-    console.log('[离线结算] lastOnline:', lastOnline, 'now:', now, '差值(分钟):', Math.floor((now - lastOnline) / 60000))
     if (lastOnline <= 0) return
     const minutes = Math.min(Math.floor((now - lastOnline) / 60000), 360)
     if (minutes < 1) return
@@ -1229,17 +1265,23 @@
     offlineMinutes.value = minutes
     offlineKills.value = kills
     offlineLogs.value = []
-    const summary = { cultivateDan: 0, money: 0, strengtheningStone: 0, equipment: 0, decomposed: 0 }
+    offlineLogs.value = []
+    offlineProgressKills.value = 0
     const r = player.value.reincarnation || 0
     const reincarnation = r + 1
     const types = ['weapon', 'armor', 'accessory', 'sutra']
+    // 记录每次击杀的增量，用于动画播放
+    const perKillResults = []
+    const finalSummary = { cultivateDan: 0, money: 0, strengtheningStone: 0, equipment: 0, decomposed: 0 }
+    // 阶段1：同步计算所有击杀
     for (let i = 0; i < kills; i++) {
+      const kr = { cultivateDan: 0, money: 0, strengtheningStone: 0, equipment: 1, decomposed: 0, log: null }
       if (!player.value.keepExcessKills || player.value.taskNum < 1080) {
         player.value.taskNum++
       }
       const danGain = Math.max(1, Math.floor(Math.random() * player.value.level + 1) * reincarnation)
       player.value.props.cultivateDan += danGain
-      summary.cultivateDan += danGain
+      kr.cultivateDan = danGain
       // 装备掉落
       const type = types[Math.floor(Math.random() * 4)]
       let equipItem
@@ -1248,18 +1290,17 @@
       else if (type === 'accessory') equipItem = equip.equip_Accessorys(player.value.level)
       else equipItem = equip.equip_Sutras(player.value.level)
       equipItem.id = Date.now() + i
-      summary.equipment++
       // 背包处理
       if (player.value.inventory.length >= player.value.backpackCapacity) {
-        if (player.value.sellingEquipmentData.includes(equipItem.quality)) {
-          let lv = equipItem.level + (equipItem.level * r) / 10
-          player.value.props.strengtheningStone += Math.floor(Number(lv) || 0)
-          player.value.props.money += 1
-          summary.strengtheningStone += Math.floor(Number(lv) || 0)
-          summary.money += 1
-          summary.decomposed++
+        const result = decomposeInventory()
+        kr.strengtheningStone += result.stone
+        kr.money += result.money
+        kr.decomposed += result.money
+        if (player.value.inventory.length < player.value.backpackCapacity) {
+          player.value.inventory.push(equipItem)
+          if (equipItem.quality === 'pink') player.value.pinkEquipCount = (player.value.pinkEquipCount || 0) + 1
         } else {
-          summary.decomposed++
+          kr.decomposed++
         }
       } else {
         player.value.inventory.push(equipItem)
@@ -1278,16 +1319,57 @@
             player.value.cultivation = 0
             player.value.maxCultivation = Math.floor(100 * Math.pow(2, player.value.level) * reincarnation)
             player.value.taskNum = player.value.keepExcessKills ? Math.max(0, player.value.taskNum - player.value.level) : 0
-            offlineLogs.value.push(`<span style="color: #67C23A">突破成功！当前境界：${levelNames(player.value.level)}</span>`)
+            kr.log = `<span style="color: #67C23A">突破成功！当前境界：${levelNames(player.value.level)}</span>`
           }
         }
       }
+      perKillResults.push(kr)
+      finalSummary.cultivateDan += kr.cultivateDan
+      finalSummary.money += kr.money
+      finalSummary.strengtheningStone += kr.strengtheningStone
+      finalSummary.equipment += kr.equipment
+      finalSummary.decomposed += kr.decomposed
     }
-    offlineLogs.value.unshift(`<span style="color: #409EFF">离线${minutes}分钟，共击杀${kills}个怪物</span>`)
-    offlineLogs.value.push(`<span style="color: #E6A23C">总计: +${summary.cultivateDan}培养丹, +${summary.equipment}件装备, 分解${summary.decomposed}件</span>`)
-    offlineSummary.value = summary
+    // 阶段2：异步播放（50ms一个击杀）
+    offlineFinalSummary.value = { ...finalSummary }
+    offlineSummary.value = { cultivateDan: 0, money: 0, strengtheningStone: 0, equipment: 0, decomposed: 0 }
     offlineSettlementShow.value = true
+    offlinePlaying.value = true
     player.value.lastOnline = Date.now()
+    const headerText = `<span style="color: #409EFF">离线${minutes}分钟，正在回放... 0/${kills} 击杀</span>`
+    offlineLogs.value = [headerText]
+    const interval = Math.min(50, Math.floor(20000 / kills))
+    offlinePlayTimer.value = setInterval(() => {
+      const kr = perKillResults[offlineProgressKills.value]
+      offlineSummary.value.cultivateDan += kr.cultivateDan
+      offlineSummary.value.money += kr.money
+      offlineSummary.value.strengtheningStone += kr.strengtheningStone
+      offlineSummary.value.equipment += kr.equipment
+      offlineSummary.value.decomposed += kr.decomposed
+      offlineProgressKills.value++
+      // 更新 header（第一行）
+      offlineLogs.value[0] = `<span style="color: #409EFF">离线${minutes}分钟，正在回放... ${offlineProgressKills.value}/${kills} 击杀</span>`
+      if (kr.log) offlineLogs.value.push(kr.log)
+      if (offlineProgressKills.value >= kills) {
+        clearInterval(offlinePlayTimer.value)
+        offlinePlayTimer.value = null
+        offlinePlaying.value = false
+        offlineLogs.value[0] = `<span style="color: #409EFF">离线${minutes}分钟，共击杀${kills}个怪物</span>`
+        offlineLogs.value.push(`<span style="color: #E6A23C">总计: +${finalSummary.cultivateDan}培养丹, +${finalSummary.equipment}件装备, 分解${finalSummary.decomposed}件</span>`)
+      }
+    }, interval)
+  }
+  // 跳过离线动画
+  const skipOfflineAnimation = () => {
+    if (offlinePlayTimer.value) {
+      clearInterval(offlinePlayTimer.value)
+      offlinePlayTimer.value = null
+    }
+    offlineProgressKills.value = offlineKills.value
+    offlinePlaying.value = false
+    offlineSummary.value = { ...offlineFinalSummary.value }
+    offlineLogs.value[0] = `<span style="color: #409EFF">离线${offlineMinutes.value}分钟，共击杀${offlineKills.value}个怪物</span>`
+    offlineLogs.value.push(`<span style="color: #E6A23C">总计: +${offlineFinalSummary.value.cultivateDan}培养丹, +${offlineFinalSummary.value.equipment}件装备, 分解${offlineFinalSummary.value.decomposed}件</span>`)
   }
   // 进入主页时检查离线收益
   simulateOfflineBattles()
@@ -1984,6 +2066,14 @@
 
   // 一键炼器
   const autoEnhancing = ref(false)
+  const autoEnhanceTimer = ref(null)
+  const stopAutoEnhance = () => {
+    if (autoEnhanceTimer.value) {
+      clearInterval(autoEnhanceTimer.value)
+      autoEnhanceTimer.value = null
+    }
+    autoEnhancing.value = false
+  }
   const enhanceOnce = item => {
     const cost = calcEnhanceCost(item)
     if (cost > player.value.props.strengtheningStone || item.strengthen >= 30) return 'stop'
@@ -2017,17 +2107,15 @@
     autoEnhancing.value = true
     let successCount = 0
     let failCount = 0
-    const timer = setInterval(() => {
+    autoEnhanceTimer.value = setInterval(() => {
       if (item.strengthen >= 30) {
-        clearInterval(timer)
-        autoEnhancing.value = false
+        stopAutoEnhance()
         gameNotifys({ title: '一键炼器', message: `已完成！成功${successCount}次，失败${failCount}次，装备已满级+30`, position: 'top-left' })
         return
       }
       const cost = calcEnhanceCost(item)
       if (cost > player.value.props.strengtheningStone) {
-        clearInterval(timer)
-        autoEnhancing.value = false
+        stopAutoEnhance()
         gameNotifys({ title: '一键炼器', message: `已停止！成功${successCount}次，失败${failCount}次，炼器石不足`, position: 'top-left' })
         return
       }
@@ -2035,8 +2123,7 @@
       if (result === 'success') successCount++
       else if (result === 'fail') failCount++
       else if (result === 'destroyed') {
-        clearInterval(timer)
-        autoEnhancing.value = false
+        stopAutoEnhance()
         gameNotifys({ title: '一键炼器', message: `装备已销毁！成功${successCount}次，失败${failCount}次`, position: 'top-left', type: 'error' })
         return
       }
@@ -2237,22 +2324,28 @@
   }
   // 一键道侣升级
   const autoWifeUpgrading = ref(false)
+  const autoWifeUpgradeTimer = ref(null)
+  const stopAutoWifeUpgrade = () => {
+    if (autoWifeUpgradeTimer.value) {
+      clearInterval(autoWifeUpgradeTimer.value)
+      autoWifeUpgradeTimer.value = null
+    }
+    autoWifeUpgrading.value = false
+  }
   const autoWifeUpgrade = () => {
     if (autoWifeUpgrading.value) return
     autoWifeUpgrading.value = true
     let count = 0
-    const timer = setInterval(() => {
+    autoWifeUpgradeTimer.value = setInterval(() => {
       const item = player.value.wife
       if (item.level >= maxLv) {
-        clearInterval(timer)
-        autoWifeUpgrading.value = false
+        stopAutoWifeUpgrade()
         gameNotifys({ title: '一键道侣升级', message: `已完成！升级${count}次，道侣等级已满`, position: 'top-left' })
         return
       }
       const consume = item.level * 2
       if (consume > player.value.props.qingyuan) {
-        clearInterval(timer)
-        autoWifeUpgrading.value = false
+        stopAutoWifeUpgrade()
         gameNotifys({ title: '一键道侣升级', message: `已停止！升级${count}次，情缘点不足`, position: 'top-left' })
         return
       }
@@ -2270,42 +2363,42 @@
   }
   // 一键灵宠培养
   const autoPetUpgrading = ref(false)
+  const autoPetUpgradeTimer = ref(null)
+  const stopAutoPetUpgrade = () => {
+    if (autoPetUpgradeTimer.value) {
+      clearInterval(autoPetUpgradeTimer.value)
+      autoPetUpgradeTimer.value = null
+    }
+    autoPetUpgrading.value = false
+  }
   const autoPetUpgrade = () => {
     if (autoPetUpgrading.value) return
     autoPetUpgrading.value = true
     let count = 0
-    const timer = setInterval(() => {
+    autoPetUpgradeTimer.value = setInterval(() => {
       const item = player.value.pet
       // 等级满且未勾转生
       if (!petReincarnation.value && item.level >= maxLv) {
-        clearInterval(timer)
-        autoPetUpgrading.value = false
+        stopAutoPetUpgrade()
         gameNotifys({ title: '一键灵宠培养', message: `已完成！培养${count}次，灵宠境界已满`, position: 'top-left' })
         return
       }
       // 勾了转生但人物转生不够
       if (petReincarnation.value && player.value.reincarnation < item.reincarnation) {
-        clearInterval(timer)
-        autoPetUpgrading.value = false
+        stopAutoPetUpgrade()
         gameNotifys({ title: '一键灵宠培养', message: `已停止！培养${count}次，灵宠转生不能高于人物转生`, position: 'top-left' })
         return
-      }
-      // 勾了转生但等级没满
-      if (petReincarnation.value && item.level < maxLv) {
-        // 继续培养升级
       }
       // 培养丹不足
       const consume = petConsumption(item.level)
       if (consume > player.value.props.cultivateDan) {
-        clearInterval(timer)
-        autoPetUpgrading.value = false
+        stopAutoPetUpgrade()
         gameNotifys({ title: '一键灵宠培养', message: `已停止！培养${count}次，培养丹不足`, position: 'top-left' })
         return
       }
       // 悟性丹不足
       if (petRootBone.value && player.value.props.rootBone < item.rootBone) {
-        clearInterval(timer)
-        autoPetUpgrading.value = false
+        stopAutoPetUpgrade()
         gameNotifys({ title: '一键灵宠培养', message: `已停止！培养${count}次，悟性丹不足`, position: 'top-left' })
         return
       }
@@ -2765,10 +2858,10 @@
   }
   // 灵石商店
   const lingShiShopItems = ref([
-    { name: '培养丹', key: 'cultivateDan', price: 1000, buyCount: 1 },
-    { name: '炼器石', key: 'strengtheningStone', price: 500, buyCount: 1 },
-    { name: '情缘', key: 'qingyuan', price: 100, buyCount: 1 },
-    { name: '传送符', key: 'flying', price: 100, buyCount: 1 }
+    { name: '培养丹', key: 'cultivateDan', price: 1000, sellPrice: 500, buyCount: 1, sellCount: 1 },
+    { name: '炼器石', key: 'strengtheningStone', price: 500, sellPrice: 250, buyCount: 1, sellCount: 1 },
+    { name: '情缘', key: 'qingyuan', price: 100, sellPrice: 50, buyCount: 1, sellCount: 1 },
+    { name: '传送符', key: 'flying', price: 100, sellPrice: 50, buyCount: 1, sellCount: 1 }
   ])
   const buyMaterial = item => {
     const totalCost = item.price * item.buyCount
@@ -2779,6 +2872,17 @@
     } else {
       gameNotifys({ title: '购买失败', message: '灵石不足' })
     }
+  }
+  const sellMaterial = item => {
+    const count = item.sellCount
+    if (player.value.props[item.key] < count) {
+      gameNotifys({ title: '出售失败', message: `${item.name}不足` })
+      return
+    }
+    const income = item.sellPrice * count
+    player.value.props[item.key] -= count
+    player.value.props.money += income
+    gameNotifys({ title: '出售成功', message: `出售${count}个${item.name}，获得${income}灵石` })
   }
   // 灵石兑换境界点
   const exchangeCount = ref(1)
