@@ -12,7 +12,7 @@ const equips = {
       purple: { names: names_d, probability: 9 }, // 紫装
       warning: { names: names_e, probability: 5 }, // 金装
       danger: { names: names_f, probability: 1 }, // 红装
-      pink: { names: names_g || names_f, probability: 0.05 } // 仙装 0.05%
+      pink: { names: names_g || names_f, probability: 0.1 } // 仙装 0.1%
     }
     const totalProbability = Object.values(weaponTypes).reduce((acc, { probability }) => acc + probability, 0)
     const random = Math.floor(Math.random() * totalProbability)

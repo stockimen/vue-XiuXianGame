@@ -1213,7 +1213,7 @@
 
   const store = useMainStore()
   const router = useRouter()
-  const ver = ref('2.2.2')
+  const ver = ref('2.2.3')
   // 错误信息
   const err = ref('')
   const show = ref(false)
@@ -2858,10 +2858,10 @@
   }
   // 灵石商店
   const lingShiShopItems = ref([
-    { name: '培养丹', key: 'cultivateDan', price: 1000, sellPrice: 500, buyCount: 1, sellCount: 1 },
-    { name: '炼器石', key: 'strengtheningStone', price: 500, sellPrice: 250, buyCount: 1, sellCount: 1 },
-    { name: '情缘', key: 'qingyuan', price: 100, sellPrice: 50, buyCount: 1, sellCount: 1 },
-    { name: '传送符', key: 'flying', price: 100, sellPrice: 50, buyCount: 1, sellCount: 1 }
+    { name: '培养丹', key: 'cultivateDan', price: 1000, sellPrice: 10, buyCount: 1, sellCount: 1 },
+    { name: '炼器石', key: 'strengtheningStone', price: 500, sellPrice: 50, buyCount: 1, sellCount: 1 },
+    { name: '情缘', key: 'qingyuan', price: 100, sellPrice: 10, buyCount: 1, sellCount: 1 },
+    { name: '传送符', key: 'flying', price: 100, sellPrice: 10, buyCount: 1, sellCount: 1 }
   ])
   const buyMaterial = item => {
     const totalCost = item.price * item.buyCount
