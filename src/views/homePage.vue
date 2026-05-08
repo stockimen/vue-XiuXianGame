@@ -371,21 +371,30 @@
             <el-tab-pane label="灵石商店" name="lingShiShop">
               <div class="inventory-content">
                 <div style="font-weight: bold; font-size: 13px; margin-bottom: 8px;">购买</div>
-                <div v-for="(item, index) in lingShiShopItems" :key="'buy-'+index" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
-                  <tag type="primary">{{ item.name }}</tag>
-                  <span style="font-size: 12px; white-space: nowrap;">{{ item.price }}灵石/个</span>
-                  <el-slider v-model="item.buyCount" :min="1" :max="Math.max(1, Math.floor(player.props.money / item.price))" style="flex: 1; min-width: 100px;" />
-                  <span style="font-size: 12px; white-space: nowrap;">x{{ item.buyCount }}</span>
-                  <el-button size="small" type="primary" @click="buyMaterial(item)">购买</el-button>
+                <div v-for="(item, index) in lingShiShopItems" :key="'buy-'+index" style="margin-bottom: 8px;">
+                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                    <tag type="primary">{{ item.name }}</tag>
+                    <span style="font-size: 12px;">{{ item.price }}灵石/个</span>
+                    <el-button size="small" type="primary" @click="buyMaterial(item)" style="margin-left: auto;">购买</el-button>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <el-slider v-model="item.buyCount" :min="1" :max="Math.max(1, Math.floor(player.props.money / item.price))" style="flex: 1;" />
+                    <span style="font-size: 12px; white-space: nowrap;">x{{ item.buyCount }}</span>
+                  </div>
                 </div>
                 <el-divider />
                 <div style="font-weight: bold; font-size: 13px; margin-bottom: 8px;">出售(5折)</div>
-                <div v-for="(item, index) in lingShiShopItems" :key="'sell-'+index" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
-                  <tag type="warning">{{ item.name }}</tag>
-                  <span style="font-size: 12px; white-space: nowrap;">{{ item.sellPrice }}灵石/个 | 拥有: {{ Math.floor(player.props[item.key]) }}</span>
-                  <el-slider v-model="item.sellCount" :min="1" :max="Math.max(1, Math.floor(player.props[item.key]))" style="flex: 1; min-width: 100px;" />
-                  <span style="font-size: 12px; white-space: nowrap;">x{{ item.sellCount }}</span>
-                  <el-button size="small" type="danger" @click="sellMaterial(item)">出售</el-button>
+                <div v-for="(item, index) in lingShiShopItems" :key="'sell-'+index" style="margin-bottom: 8px;">
+                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                    <tag type="warning">{{ item.name }}</tag>
+                    <span style="font-size: 12px;">{{ item.sellPrice }}灵石/个</span>
+                    <span style="font-size: 12px;">拥有: {{ Math.floor(player.props[item.key]) }}</span>
+                    <el-button size="small" type="danger" @click="sellMaterial(item)" style="margin-left: auto;">出售</el-button>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <el-slider v-model="item.sellCount" :min="1" :max="Math.max(1, Math.floor(player.props[item.key]))" style="flex: 1;" />
+                    <span style="font-size: 12px; white-space: nowrap;">x{{ item.sellCount }}</span>
+                  </div>
                 </div>
               </div>
             </el-tab-pane>
@@ -1213,7 +1222,7 @@
 
   const store = useMainStore()
   const router = useRouter()
-  const ver = ref('2.2.3')
+  const ver = ref('2.2.4')
   // 错误信息
   const err = ref('')
   const show = ref(false)
@@ -3138,7 +3147,8 @@
 
   .inventory-content {
     margin-bottom: 15px;
-    height: 120px;
+    height: auto;
+    max-height: 300px;
     overflow: auto;
   }
 

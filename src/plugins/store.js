@@ -87,6 +87,7 @@ export const useMainStore = defineStore('main', {
         secretrealm: 0,
         gamblingStone: null
       },
+      sweepCooldownEnd: 0,
       gameWins: 0,
       gameLosses: 0,
       checkinDays: 0,

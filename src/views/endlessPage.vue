@@ -31,6 +31,9 @@
       </el-button>
     </div>
     <div class="sweep-info">
+      <div v-if="isSweepCoolingDown" style="text-align: center; margin-bottom: 10px;">
+        <el-countdown title="扫荡冷却" :value="player.sweepCooldownEnd" />
+      </div>
       <el-row>
         <el-col :span="6" v-for="(item, index) in sweepData" :key="index">
           <div class="el-statistic">
@@ -72,41 +75,36 @@
   // 怪物数据
   const monster = ref(null)
   const observer = ref(null)
-  // 扫荡时间
-  const sweepTime = ref(0)
   // 战斗日志
   const battleLogs = ref([])
   // 当前层数
   const currentFloor = ref(1)
-  // 是否正在扫荡
-  const isSweeping = ref(false)
-  // 扫荡结果
+  // 扫荡结果（显示最近一次）
   const sweepResults = ref({
-    // 获得的修为
     expGain: 0,
-    // 获得的灵石
     moneyGain: 0,
-    // 获得的装备数量
     equipmentGained: 0
   })
   // 玩家气血状态
   const playerStatus = ref('success')
   // 怪物气血状态
   const monsterStatus = ref('success')
-  // 扫荡时间间隔
-  const sweepInterval = ref(null)
   // 是否自动战斗
   const isAutoFighting = ref(false)
   // 自动战斗时间间隔
   const autoFightInterval = ref(null)
-  // 扫荡战斗时间间隔
-  const sweepFightInterval = ref(null)
   const scrollbar = ref(null)
+  // 扫荡冷却计时
+  const now = ref(Date.now())
+  let tickTimer = null
 
+  // 扫荡冷却状态
+  const isSweepCoolingDown = computed(() => now.value < (player.value.sweepCooldownEnd || 0))
   // 扫荡相关信息
   const sweepData = computed(() => {
+    const sweepHours = 1 + (player.value.reincarnation || 0)
     return [
-      { name: '扫荡时间', suffix: formatTime(sweepTime.value) },
+      { name: '扫荡时长', suffix: `${sweepHours}小时` },
       { name: '获得修为', suffix: `${formatNumberToChineseUnit(sweepResults.value.expGain)}点` },
       { name: '获得灵石', suffix: `${formatNumberToChineseUnit(sweepResults.value.moneyGain)}块` },
       { name: '获得装备', suffix: `${formatNumberToChineseUnit(sweepResults.value.equipmentGained)}件` }
@@ -119,17 +117,17 @@
       {
         text: isAutoFighting.value ? '停止对战' : '自动对战',
         click: () => toggleAutoFight(),
-        disabled: isSweeping.value || player.value.health <= 0
+        disabled: player.value.health <= 0
       },
       {
         text: '进行对战',
         click: () => fight(),
-        disabled: isSweeping.value || isAutoFighting.value || !monster.value || player.value.health <= 0
+        disabled: isAutoFighting.value || !monster.value || player.value.health <= 0
       },
       {
-        text: isSweeping.value ? '停止扫荡' : '开始扫荡',
-        click: () => toggleSweep(),
-        disabled: isAutoFighting.value || player.value.health <= 0
+        text: isSweepCoolingDown.value ? '扫荡冷却中' : '开始扫荡',
+        click: () => executeSweep(),
+        disabled: isSweepCoolingDown.value || isAutoFighting.value || player.value.health <= 0
       },
       { text: '撤退回家', click: () => retreat(), disabled: false }
     ]
@@ -317,12 +315,8 @@
     battleLogs.value.push(`${monster.value.name}: ${boss.drawPrize(monster.value.level).text}`)
     // 关闭自动战斗
     isAutoFighting.value = false
-    // 关闭扫荡
-    isSweeping.value = false
     // 停止自动战斗
     stopAutoFight()
-    // 停止扫荡
-    stopSweep()
   }
   // 切换自动战斗状态
   const toggleAutoFight = () => {
@@ -344,12 +338,8 @@
   const retreat = () => {
     // 关闭自动战斗
     isAutoFighting.value = false
-    // 关闭扫荡
-    isSweeping.value = false
     // 停止自动战斗
     stopAutoFight()
-    // 停止扫荡
-    stopSweep()
     router.push('/home')
   }
 
@@ -376,71 +366,46 @@
     else player.value.inventory.push(equipItem)
   }
 
-  // 切换扫荡状态
-  const toggleSweep = () => {
-    // 扫荡状态
-    isSweeping.value = !isSweeping.value
-    if (isSweeping.value) {
-      // 重置扫荡时间
-      sweepTime.value = 0
-      // 重置扫荡结果
-      sweepResults.value = { expGain: 0, moneyGain: 0, equipmentGained: 0 }
-      // 设定每秒更新扫荡时间
-      sweepInterval.value = setInterval(sweep, 1000)
-      // 每30秒进行一次战斗
-      sweepFightInterval.value = setInterval(sweepFight, 30000)
-    } else {
-      // 停止扫荡
-      stopSweep()
+  // 执行扫荡（冷却机制）
+  const executeSweep = () => {
+    const reincarnation = player.value.reincarnation || 0
+    const sweepHours = 1 + reincarnation
+    const totalSettlements = sweepHours * 120 // 每小时120次结算（每30秒一次）
+
+    // 计算产出
+    const expPerSettlement = Math.floor(currentFloor.value * 10)
+    const moneyPerSettlement = Math.floor(currentFloor.value * 10)
+    const totalExp = expPerSettlement * totalSettlements
+    const totalMoney = moneyPerSettlement * totalSettlements
+
+    // 发放修为和灵石
+    player.value.cultivation += totalExp
+    player.value.props.money += totalMoney
+    player.value.jishaNum += totalSettlements
+
+    // 装备掉落：10%概率，背包满则丢弃
+    let equipmentGained = 0
+    let equipmentDropped = 0
+    for (let i = 0; i < totalSettlements; i++) {
+      if (Math.random() < 0.1) {
+        if (player.value.inventory.length < player.value.backpackCapacity) {
+          getRandomEquipment()
+          equipmentGained++
+        } else {
+          equipmentDropped++
+        }
+      }
     }
-  }
 
-  // 停止扫荡
-  const stopSweep = () => {
-    clearInterval(sweepInterval.value)
-    clearInterval(sweepFightInterval.value)
-    sweepInterval.value = null
-    sweepFightInterval.value = null
-  }
+    // 更新扫荡结果（显示用）
+    sweepResults.value = { expGain: totalExp, moneyGain: totalMoney, equipmentGained }
 
-  // 进行扫荡
-  const sweep = () => {
-    // 增加扫荡时间
-    sweepTime.value++
-    // 60秒更新一次日志
-    if (sweepTime.value % 60 === 0)
-      battleLogs.value.push(
-        `扫荡结果：目前已扫荡${formatTime(sweepTime.value)}，恭喜你获得了${sweepResults.value.expGain}点修为，${
-          sweepResults.value.moneyGain
-        }灵石和${sweepResults.value.equipmentGained}件装备。`
-      )
-  }
+    // 设置冷却
+    player.value.sweepCooldownEnd = Date.now() + sweepHours * 3600 * 1000
 
-  // 扫荡战斗
-  const sweepFight = () => {
-    // 根据当前层数计算获得经验值
-    const expGain = Math.floor(currentFloor.value * 10)
-    // 根据当前层数计算获得灵石
-    const moneyGain = Math.floor(currentFloor.value * 10)
-    // 增加玩家修为
-    player.value.cultivation += expGain
-    // 增加玩家灵石
-    player.value.props.money += moneyGain
-    // 增加击杀数
-    player.value.jishaNum++
-    // 更新扫荡结果中的经验值
-    sweepResults.value.expGain += expGain
-    // 更新扫荡结果中的灵石
-    sweepResults.value.moneyGain += moneyGain
-    // 10% 概率获得装备
-    const equipmentGained = Math.random() < 0.1
-    if (equipmentGained) {
-      getRandomEquipment()
-      sweepResults.value.equipmentGained++
-    }
     // 日志
     battleLogs.value.push(
-      `扫荡结果：恭喜你获得了${expGain}点修为，${moneyGain}块灵石${equipmentGained ? '和1件装备' : '。'}`
+      `扫荡完成！${sweepHours}小时产出：${formatNumberToChineseUnit(totalExp)}修为、${formatNumberToChineseUnit(totalMoney)}灵石、${equipmentGained}件装备${equipmentDropped > 0 ? `（${equipmentDropped}件因背包已满丢弃）` : ''}`
     )
   }
 
@@ -491,13 +456,14 @@
     )
     // 生成怪物
     generateMonster()
+    // 冷却倒计时驱动
+    tickTimer = setInterval(() => { now.value = Date.now() }, 1000)
   })
 
   onUnmounted(() => {
     // 停止自动战斗
     stopAutoFight()
-    // 停止扫荡
-    stopSweep()
+    clearInterval(tickTimer)
     stopObserving()
   })
 </script>
