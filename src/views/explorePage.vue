@@ -528,25 +528,23 @@
         // 玩家灵宠成就
         const petAchievement = player.value.achievement.pet
         // 完成成就
-        const checkAchievement = item => {
+        const checkPetAchievement = (item, pet) => {
           const conditions = item.condition
           return (
-            (conditions.health === 0 || conditions.health <= health) &&
-            (conditions.attack === 0 || conditions.attack <= attack) &&
-            (conditions.defense === 0 || conditions.defense <= defense) &&
-            (conditions.dodge === 0 || conditions.dodge <= dodge.toFixed(2)) &&
-            (conditions.critical === 0 || conditions.critical <= critical.toFixed(2))
+            (conditions.health === 0 || conditions.health <= pet.health) &&
+            (conditions.attack === 0 || conditions.attack <= pet.attack) &&
+            (conditions.defense === 0 || conditions.defense <= pet.defense) &&
+            (conditions.dodge === 0 || conditions.dodge <= pet.dodge) &&
+            (conditions.critical === 0 || conditions.critical <= pet.critical)
           )
         }
-        // 完成成就
+        // 完成成就（遍历所有灵宠）
         achievement.pet().forEach(item => {
-          // 检查成就条件是否达成并且成就尚未完成
-          if (checkAchievement(item) && !petAchievement.find(i => i.id === item.id)) {
-            // 添加成就
+          if (petAchievement.find(i => i.id === item.id)) return
+          const matched = player.value.pets.some(pet => checkPetAchievement(item, pet))
+          if (matched) {
             player.value.achievement.pet.push({ id: item.id })
-            // 增加培养丹
             player.value.props.cultivateDan += item.award
-            // 发送通知
             gameNotifys({ title: '获得成就提示', message: `恭喜你完成了${item.name}成就` })
           }
         })

@@ -40,19 +40,19 @@
           </div>
           <div class="tag attribute">
             气血: {{ formatNumberToChineseUnit(player.health) }} / {{ formatNumberToChineseUnit(player.maxHealth) }}
-            <el-icon v-if="player.points > 0" @click="attributePoints('health')">
+            <el-icon v-if="player.points > 0" @click="attributePoints('health')" @mousedown="startAddPoints('health')" @mouseup="stopAddPoints" @mouseleave="stopAddPoints" @touchend="stopAddPoints">
               <CirclePlus />
             </el-icon>
           </div>
           <div class="tag attribute">
             攻击: {{ formatNumberToChineseUnit(player.attack) }}
-            <el-icon v-if="player.points > 0" @click="attributePoints('attack')">
+            <el-icon v-if="player.points > 0" @click="attributePoints('attack')" @mousedown="startAddPoints('attack')" @mouseup="stopAddPoints" @mouseleave="stopAddPoints" @touchend="stopAddPoints">
               <CirclePlus />
             </el-icon>
           </div>
           <div class="tag attribute">
             防御: {{ formatNumberToChineseUnit(player.defense) }}
-            <el-icon v-if="player.points > 0" @click="attributePoints('defense')">
+            <el-icon v-if="player.points > 0" @click="attributePoints('defense')" @mousedown="startAddPoints('defense')" @mouseup="stopAddPoints" @mouseleave="stopAddPoints" @touchend="stopAddPoints">
               <CirclePlus />
             </el-icon>
           </div>
@@ -66,17 +66,12 @@
           <div class="tag attribute">总体实力: {{ formatNumberToChineseUnit(player.score) }}</div>
           <div
             class="tag attribute"
-            @click="gameNotifys({ title: '获得方式', message: '每提成一次境界可以获得3点境界点' })"
+            @click="openExchangeDialog"
           >
             境界点: {{ formatNumberToChineseUnit(player.points) }}
             <el-icon>
               <Warning />
             </el-icon>
-            <el-button size="small" type="warning" @click="exchangePoints" style="margin-left: 8px" :disabled="player.props.money < 10000">
-              灵石兑换
-            </el-button>
-            <el-slider v-model="exchangeCount" :min="1" :max="Math.max(1, Math.floor(player.props.money / 10000))" style="flex:1; min-width:60px;" />
-            <span style="font-size: 12px;">x{{ exchangeCount }}</span>
           </div>
           <div class="tag attribute" @click="gameNotifys({ title: '获得方式', message: '每转生一次可以增加50容量' })">
             背包容量: {{ player?.inventory?.length }} / {{ player.backpackCapacity }}
@@ -1190,7 +1185,7 @@
 </template>
 <script setup>
   import { useRouter } from 'vue-router'
-  import { ref, computed, watch, onMounted } from 'vue'
+  import { ref, computed, watch, onMounted, h } from 'vue'
   // 标签组件
   import tag from '@/components/tag.vue'
   // 商店
@@ -1222,7 +1217,7 @@
 
   const store = useMainStore()
   const router = useRouter()
-  const ver = ref('2.2.4')
+  const ver = ref('2.2.5')
   // 错误信息
   const err = ref('')
   const show = ref(false)
@@ -2835,40 +2830,58 @@
   }
 
   // 属性加点
-  const attributePoints = type => {
+  const attributePoints = (type, silent = false) => {
     const typeNames = {
       attack: '攻击',
       health: '气血',
       defense: '防御'
     }
     if (player.value.points > 0) {
-      // 获取对应属性的当前值
       let currentStat
       if (type === 'attack') currentStat = getBaseStat(player.value, 'attack')
       else if (type === 'defense') currentStat = getBaseStat(player.value, 'defense')
       else currentStat = getBaseStat(player.value, 'maxHealth')
-      // 百分比加成: 当前属性值的0.2%, 最低保底为 max(100, 等级×10)
       const percent = 0.002
       const minBonus = Math.max(100, player.value.level * 10)
       const numText = Math.max(minBonus, Math.floor(currentStat * percent))
-      // 如果是攻击
       if (type == 'attack') playerAttribute(0, numText, 0, 0, 0)
-      // 如果是防御
       else if (type == 'defense') playerAttribute(0, 0, 0, 0, numText)
-      // 如果是血量
       else if (type == 'health') playerAttribute(0, 0, numText, 0, 0)
-      // 扣除点数
       player.value.points--
-      gameNotifys({
-        title: '加点提示',
-        message: `加点成功${typeNames[type]}增加了${numText}点`
-      })
+      if (!silent) {
+        gameNotifys({
+          title: '加点提示',
+          message: `加点成功${typeNames[type]}增加了${numText}点`
+        })
+      }
+    }
+  }
+  // 长按加点
+  let addPointsTimer = null
+  let addPointsDelay = null
+  const startAddPoints = type => {
+    stopAddPoints()
+    addPointsDelay = setTimeout(() => {
+      addPointsTimer = setInterval(() => {
+        if (player.value.points > 0) attributePoints(type, true)
+        else stopAddPoints()
+      }, 100)
+    }, 200)
+  }
+  const stopAddPoints = () => {
+    if (addPointsDelay) {
+      clearTimeout(addPointsDelay)
+      addPointsDelay = null
+    }
+    if (addPointsTimer) {
+      clearInterval(addPointsTimer)
+      addPointsTimer = null
     }
   }
   // 灵石商店
   const lingShiShopItems = ref([
-    { name: '培养丹', key: 'cultivateDan', price: 1000, sellPrice: 10, buyCount: 1, sellCount: 1 },
-    { name: '炼器石', key: 'strengtheningStone', price: 500, sellPrice: 50, buyCount: 1, sellCount: 1 },
+    { name: '培养丹', key: 'cultivateDan', price: 100, sellPrice: 10, buyCount: 1, sellCount: 1 },
+    { name: '炼器石', key: 'strengtheningStone', price: 60, sellPrice: 50, buyCount: 1, sellCount: 1 },
     { name: '情缘', key: 'qingyuan', price: 100, sellPrice: 10, buyCount: 1, sellCount: 1 },
     { name: '传送符', key: 'flying', price: 100, sellPrice: 10, buyCount: 1, sellCount: 1 }
   ])
@@ -2895,6 +2908,42 @@
   }
   // 灵石兑换境界点
   const exchangeCount = ref(1)
+  const openExchangeDialog = () => {
+    exchangeCount.value = 1
+    const maxCount = Math.max(1, Math.floor(player.value.props.money / 10000))
+    ElMessageBox({
+      title: '境界点',
+      message: () => h('div', { style: 'line-height: 2;' }, [
+        h('p', { style: 'margin: 0 0 8px; color: #909399; font-size: 13px;' }, '每提成一次境界可以获得3点境界点'),
+        h('div', { style: 'border-top: 1px solid #ebeef5; padding-top: 12px; margin-top: 4px;' }, [
+          h('div', { style: 'font-weight: bold; font-size: 13px; margin-bottom: 8px;' }, '兑换境界点'),
+          h('div', { style: 'display: flex; align-items: center; gap: 8px; margin-bottom: 4px;' }, [
+            h('span', { style: 'font-size: 12px;' }, `10000灵石/点 | 拥有: ${formatNumberToChineseUnit(player.value.props.money)}灵石`),
+            h(ElButton, {
+              size: 'small',
+              type: 'warning',
+              style: 'margin-left: auto;',
+              disabled: player.value.props.money < 10000,
+              onClick: () => exchangePoints()
+            }, () => '兑换')
+          ]),
+          h('div', { style: 'display: flex; align-items: center; gap: 8px;' }, [
+            h(ElSlider, {
+              modelValue: exchangeCount.value,
+              min: 1,
+              max: maxCount,
+              'onUpdate:modelValue': val => { exchangeCount.value = val },
+              style: 'flex: 1;'
+            }),
+            h('span', { style: 'font-size: 12px; white-space: nowrap;' }, `x${exchangeCount.value}`)
+          ])
+        ])
+      ]),
+      confirmButtonText: '关闭',
+      showCancelButton: false,
+      customStyle: { maxWidth: '400px' }
+    }).catch(() => {})
+  }
   const exchangePoints = () => {
     const count = exchangeCount.value
     const totalCost = count * 10000
