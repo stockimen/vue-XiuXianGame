@@ -71,7 +71,8 @@
   import equip from '@/plugins/equip'
   import { useMainStore } from '@/plugins/store'
   // 成就
-  import achievement from '@/plugins/achievement'
+  import { checkAchievements } from '@/plugins/achievementChecker'
+  import { recordEquipmentDecompose, recordEquipmentGain, recordStat } from '@/plugins/playerStats'
   import {
     maxLv,
     levelNames,
@@ -265,7 +266,7 @@
     let isMCritical = false,
       isCritical = false
     // 怪物是否闪避
-    const isMHit = Math.random() > player.value.dodge
+    const isMHit = Math.random() > Math.min(player.value.dodge || 0, 0.7)
     // 玩家是否闪避
     const isPHit = Math.random() > monster.value.dodge
     // 检查野怪是否暴击
@@ -297,6 +298,7 @@
         if (!player.value.keepExcessKills || player.value.taskNum < 1080) {
           player.value.taskNum++
         }
+        recordStat(player.value, 'exploreKills')
         // 增加培养丹
         const reincarnation = player.value.reincarnation ? 1 + 1 * player.value.reincarnation : 1
         const danGain = Math.floor(Math.random() * player.value.level + 1) * reincarnation
@@ -306,6 +308,8 @@
         findTreasure(monster.value.name)
         stopFight()
       } else if (player.value.health <= 0) {
+        recordStat(player.value, 'deathCount')
+        checkAchievements(player.value, 'battle')
         texts.value.push('你因为太弱被击败了。')
         stopFight()
       } else {
@@ -369,6 +373,7 @@
     }, 0)
     player.value.props.strengtheningStone += stones
     player.value.props.money += toSell.length
+    recordEquipmentDecompose(player.value, toSell.length)
     player.value.inventory = player.value.inventory.filter(
       item => !selling.includes(item.quality) || item.lock || keepIds.has(item.id)
     )
@@ -403,6 +408,7 @@
       // 自动模式下尝试自动出售
       if (isAutoMode.value && autoSellEquipment() && player.value.inventory.length < player.value.backpackCapacity) {
         player.value.inventory.push(equipItem)
+        recordEquipmentGain(player.value, equipItem)
         if (equipItem.quality === 'pink') player.value.pinkEquipCount = (player.value.pinkEquipCount || 0) + 1
       } else {
         texts.value.push(`当前装备背包容量已满, 该装备自动丢弃, 转生可增加背包容量`)
@@ -410,8 +416,11 @@
     } else {
       // 玩家获得道具
       player.value.inventory.push(equipItem)
+      recordEquipmentGain(player.value, equipItem)
       if (equipItem.quality === 'pink') player.value.pinkEquipCount = (player.value.pinkEquipCount || 0) + 1
     }
+    checkAchievements(player.value, 'battle')
+    checkAchievements(player.value, 'forge', player.value)
     // 如果没有满级
     if (player.value.level < maxLv) {
       // 增加修为
@@ -526,27 +535,8 @@
           reincarnation: 0
         })
         // 玩家灵宠成就
-        const petAchievement = player.value.achievement.pet
-        // 完成成就
-        const checkPetAchievement = (item, pet) => {
-          const conditions = item.condition
-          return (
-            (conditions.health === 0 || conditions.health <= pet.health) &&
-            (conditions.attack === 0 || conditions.attack <= pet.attack) &&
-            (conditions.defense === 0 || conditions.defense <= pet.defense) &&
-            (conditions.dodge === 0 || conditions.dodge <= pet.dodge) &&
-            (conditions.critical === 0 || conditions.critical <= pet.critical)
-          )
-        }
-        // 完成成就（遍历所有灵宠）
-        achievement.pet().forEach(item => {
-          if (petAchievement.find(i => i.id === item.id)) return
-          const matched = player.value.pets.some(pet => checkPetAchievement(item, pet))
-          if (matched) {
-            player.value.achievement.pet.push({ id: item.id })
-            player.value.props.cultivateDan += item.award
-            gameNotifys({ title: '获得成就提示', message: `恭喜你完成了${item.name}成就` })
-          }
+        checkAchievements(player.value, 'companion').forEach(item => {
+          gameNotifys({ title: '获得成就提示', message: `恭喜你完成了${item.name}成就` })
         })
         texts.value.push(`收服${item.name}成功`)
       } else {

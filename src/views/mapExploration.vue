@@ -198,6 +198,8 @@
   import { useMainStore } from '@/plugins/store'
   import { ElMessageBox } from 'element-plus'
   import { levelNames, gameNotifys } from '@/plugins/game'
+  import { checkAchievements } from '@/plugins/achievementChecker'
+  import { recordStat } from '@/plugins/playerStats'
   import MinHeap from '@/plugins/minheap'
 
   const router = useRouter()
@@ -606,14 +608,24 @@
           // 添加道侣
           player.value.wifes.push({
             name: item.name,
-            level: 0,
+            level: 1,
             dodge: 0,
             attack: 100,
             health: 1000,
             defense: 100,
             critical: 0,
+            initial: {
+              dodge: 0,
+              attack: 100,
+              health: 1000,
+              defense: 100,
+              critical: 0
+            },
             reincarnation: 0
           })
+          recordStat(player.value, 'wifeMarried')
+          recordStat(player.value, 'wifeCount')
+          checkAchievements(player.value, 'companion')
           gameNotifys({ title: '提示', message: '你成功邀请对方与你结为道侣', position: 'top-left' })
         } else {
           npcInfo.value.favorability = Math.floor(npcInfo.value.favorability * 0.5)
@@ -741,6 +753,10 @@
     }
     // 每次更新玩家位置后调用
     if (playerIndex != 0) updateScroll(playerIndex)
+    if (playerIndex != 0) {
+      recordStat(player.value, 'mapSteps')
+      checkAchievements(player.value, 'battle')
+    }
   }
 
   // 计算玩家指定方向是否有NPC或障碍物
@@ -1023,7 +1039,7 @@
 
   // 判断玩家是否已当前NPC结为道侣
   const isHaveWife = name => {
-    if (name) return player.value.wifes.some(item => item.name === name)
+    if (name) return player.value.wife?.name === name || player.value.wifes.some(item => item.name === name)
   }
 
   // 钓鱼

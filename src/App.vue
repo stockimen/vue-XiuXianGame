@@ -48,6 +48,8 @@
   import { ref, watch, computed, onMounted } from 'vue'
   import { useMainStore } from './plugins/store'
   import { Close } from '@element-plus/icons-vue'
+  import { checkAchievements } from './plugins/achievementChecker'
+  import { setStatMax } from './plugins/playerStats'
 
   const player = ref({})
   const route = useRoute()
@@ -71,6 +73,9 @@
     setInterval(() => {
       // 每分钟增加1岁
       player.value.age += 1
+      setStatMax(player.value, 'age', player.value.age)
+      checkAchievements(player.value, 'battle')
+      checkAchievements(player.value, 'cultivate')
       // 每分钟更新一次玩家最后在线时间
       player.value.time = new Date().getTime()
       player.value.lastOnline = Date.now()

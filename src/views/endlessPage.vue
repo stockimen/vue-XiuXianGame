@@ -63,6 +63,7 @@
   import combatSystem from '@/plugins/combat'
   import { ElMessageBox } from 'element-plus'
   import { checkAchievements } from '@/plugins/achievementChecker'
+  import { recordEquipmentGain, recordStat, setStatMax } from '@/plugins/playerStats'
   import { useRouter } from 'vue-router'
   import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
   import { useMainStore } from '@/plugins/store'
@@ -301,7 +302,11 @@
       battleLogs.value.push(`恭喜你通过第 ${currentFloor.value} 层，获得额外奖励：500培养丹！`)
     }
     // 如果当前层数大于最高层数
-    if (currentFloor.value > player.value.highestTowerFloor) player.value.highestTowerFloor = currentFloor.value
+    if (currentFloor.value > player.value.highestTowerFloor) {
+      player.value.highestTowerFloor = currentFloor.value
+      setStatMax(player.value, 'highestTowerFloor', currentFloor.value)
+    }
+    checkAchievements(player.value, 'battle')
     // 日志
     battleLogs.value.push(`成功通过第 ${currentFloor.value - 1} 层，自动前往第 ${currentFloor.value} 层`)
     // 生成新的怪物（下一层）
@@ -310,6 +315,15 @@
 
   // 处理玩家被击败的情况
   const handlePlayerDefeat = () => {
+    recordStat(player.value, 'deathCount')
+    checkAchievements(player.value, 'battle')
+    if (isAutoFighting.value) {
+      battleLogs.value.push('你被击败了，自动对战为你回满气血并继续挑战。')
+      battleLogs.value.push(`${monster.value.name}: ${boss.drawPrize(monster.value.level).text}`)
+      player.value.health = player.value.maxHealth
+      generateMonster()
+      return
+    }
     // 日志
     battleLogs.value.push('你被击败了！挑战结束。')
     battleLogs.value.push(`${monster.value.name}: ${boss.drawPrize(monster.value.level).text}`)
@@ -363,7 +377,11 @@
     // 如果背包满了就不增加装备
     if (player.value.inventory.length >= player.value.backpackCapacity)
       battleLogs.value.push(`当前装备背包容量已满, 该装备自动丢弃, 转生可增加背包容量`)
-    else player.value.inventory.push(equipItem)
+    else {
+      player.value.inventory.push(equipItem)
+      recordEquipmentGain(player.value, equipItem)
+      checkAchievements(player.value, 'forge', player.value)
+    }
   }
 
   // 执行扫荡（冷却机制）
@@ -382,6 +400,7 @@
     player.value.cultivation += totalExp
     player.value.props.money += totalMoney
     player.value.jishaNum += totalSettlements
+    recordStat(player.value, 'exploreKills', totalSettlements)
 
     // 装备掉落：10%概率，背包满则丢弃
     let equipmentGained = 0
@@ -407,6 +426,8 @@
     battleLogs.value.push(
       `扫荡完成！${sweepHours}小时产出：${formatNumberToChineseUnit(totalExp)}修为、${formatNumberToChineseUnit(totalMoney)}灵石、${equipmentGained}件装备${equipmentDropped > 0 ? `（${equipmentDropped}件因背包已满丢弃）` : ''}`
     )
+    checkAchievements(player.value, 'battle')
+    checkAchievements(player.value, 'forge', player.value)
   }
 
   const setupObserver = () => {
@@ -441,7 +462,7 @@
 
   onMounted(() => {
     //检查成就
-    const newAchievements = checkAchievements(player.value, 'monster')
+    const newAchievements = checkAchievements(player.value, 'battle')
     newAchievements.forEach(achievement => {
       gameNotifys({
         title: '获得成就提示',
@@ -450,6 +471,7 @@
     })
     // 当前层数
     currentFloor.value = player.value.highestTowerFloor > 1 ? player.value.highestTowerFloor - 1 : 1
+    setStatMax(player.value, 'highestTowerFloor', player.value.highestTowerFloor || 1)
     // 生成日志
     battleLogs.value.push(
       `欢迎来到无尽塔, 这里是无尽塔的第${currentFloor.value}层, 你的爬塔最高记录为${player.value.highestTowerFloor}层`

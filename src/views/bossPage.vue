@@ -15,8 +15,18 @@
       </div>
     </div>
     <div class="actions">
-      <el-button @click="startFightBoss" :disabled="isEnd">发起战斗</el-button>
+      <el-button @click="startFightBoss" :disabled="isEnd || isBossOverdraftCoolingDown">发起战斗</el-button>
+      <el-button
+        type="warning"
+        @click="startOverdraftBoss"
+        :disabled="isEnd || isBossOverdraftCoolingDown || player.reincarnation <= 0"
+      >
+        透支连战{{ player.reincarnation > 0 ? `(${player.reincarnation}次)` : '' }}
+      </el-button>
       <el-button @click="router.push('/home')">回家疗伤</el-button>
+    </div>
+    <div class="cooldown" v-if="isBossOverdraftCoolingDown">
+      Boss透支冷却中：{{ bossOverdraftCooldownText }}
     </div>
   </div>
 </template>
@@ -24,9 +34,11 @@
 <script setup>
   import boss from '@/plugins/boss'
   import { useRouter } from 'vue-router'
-  import { ref, onUnmounted, onMounted } from 'vue'
+  import { ref, computed, onUnmounted, onMounted } from 'vue'
   import { useMainStore } from '@/plugins/store'
   import { ElMessageBox } from 'element-plus'
+  import { checkAchievements } from '@/plugins/achievementChecker'
+  import { recordEquipmentGain, recordStat } from '@/plugins/playerStats'
   import { maxLv, levelNames, formatNumberToChineseUnit, genre, levels, smoothScrollToBottom } from '@/plugins/game'
 
   const router = useRouter()
@@ -42,10 +54,17 @@
   const guashaRounds = ref(50)
   const equipmentInfo = ref({})
   const scrollbar = ref(null)
+  const now = ref(Date.now())
+  const nowTimer = ref(null)
+  const overdraftMode = ref(false)
+  const overdraftRemaining = ref(0)
+
+  const isBossOverdraftCoolingDown = computed(() => now.value < (player.value.bossOverdraftCooldownEnd || 0))
+  const bossOverdraftCooldownText = computed(() => formatTime(Math.ceil(((player.value.bossOverdraftCooldownEnd || 0) - now.value) / 1000)))
 
   // 开始攻击
   const startFightBoss = () => {
-    if (isEnd.value) return
+    if (isEnd.value || isBossOverdraftCoolingDown.value) return
     isEnd.value = true
     const zs = player.value.reincarnation * 10
     const time = zs >= 200 ? 100 : 300 - zs
@@ -63,10 +82,29 @@
     timerIds.value.push(timerId)
   }
 
+  const startOverdraftBoss = () => {
+    if (isEnd.value || isBossOverdraftCoolingDown.value || player.value.reincarnation <= 0) return
+    overdraftMode.value = true
+    overdraftRemaining.value = player.value.reincarnation
+    texts.value.push(`你透支气运，准备连续挑战${overdraftRemaining.value}次世界Boss。`)
+    startFightBoss()
+  }
+
   // 停止攻击
   const stopFightBoss = () => {
     timerIds.value.forEach(id => clearInterval(id))
     timerIds.value = []
+  }
+
+  const finishOverdraftBoss = () => {
+    if (!overdraftMode.value) return
+    const hours = player.value.reincarnation || 0
+    if (hours > 0) {
+      player.value.bossOverdraftCooldownEnd = Date.now() + hours * 3600 * 1000
+      texts.value.push(`透支连战结束，世界Boss进入${hours}小时冷却。`)
+    }
+    overdraftMode.value = false
+    overdraftRemaining.value = 0
   }
 
   // boss信息
@@ -123,7 +161,7 @@
     // 玩家是否闪避
     const isPlayerHit = Math.random() > store.boss.dodge
     // boss是否闪避
-    const isBHit = Math.random() > player.value.dodge
+    const isBHit = Math.random() > Math.min(player.value.dodge || 0, 0.7)
     // 检查boss是否暴击
     if (Math.random() < store.boss.critical) {
       // boss暴击，伤害加倍
@@ -163,6 +201,7 @@
         // 玩家获得道具
         else {
           player.value.inventory.push(equipItem)
+          recordEquipmentGain(player.value, equipItem)
           if (equipItem.quality === 'pink') player.value.pinkEquipCount = (player.value.pinkEquipCount || 0) + 1
         }
         // 增加悟性丹
@@ -177,19 +216,37 @@
         player.value.props.currency += currency.value
         // 获得鸿蒙石通知
         texts.value.push(`你获得了${currency.value}块鸿蒙石`)
+        recordStat(player.value, 'bossDefeated')
+        checkAchievements(player.value, 'battle').forEach(item => {
+          texts.value.push(`恭喜你完成了${item.name}成就`)
+        })
+        checkAchievements(player.value, 'forge', player.value)
         // 修改按钮状态
-        isEnd.value = true
-        // 修改boss状态
-        store.boss.time = Math.floor(Date.now() / 1000)
-        store.boss.health = 0
-        store.boss.conquer = true
-        stopFightBoss()
+        if (overdraftMode.value && overdraftRemaining.value > 1) {
+          overdraftRemaining.value--
+          const bossLv = maxLv * player.value.reincarnation + maxLv
+          store.boss = boss.drawPrize(bossLv)
+          currency.value = boss.getRandomInt(10, 30)
+          guashaRounds.value = 50
+          texts.value.push(`透支连战继续，剩余${overdraftRemaining.value}次。`)
+        } else {
+          isEnd.value = true
+          // 修改boss状态
+          store.boss.time = Math.floor(Date.now() / 1000)
+          store.boss.health = 0
+          store.boss.conquer = true
+          finishOverdraftBoss()
+          stopFightBoss()
+        }
       } else if (player.value.health <= 0) {
         isEnd.value = true
+        recordStat(player.value, 'deathCount')
+        checkAchievements(player.value, 'battle')
         // 恢复boss血量
         store.boss.health = store.boss.maxhealth
         texts.value.push('你因为太弱被击败了。')
         texts.value.push(`${store.boss.text}`)
+        finishOverdraftBoss()
         stopFightBoss()
         guashaRounds.value = 50
       } else {
@@ -210,6 +267,7 @@
       // 恢复默认回合数
       guashaRounds.value = 50
       stopFightBoss()
+      finishOverdraftBoss()
       // 恢复boss血量
       store.boss.health = store.boss.maxhealth
       texts.value.push(`回合结束, 你未战胜${store.boss.name}你输了。`)
@@ -250,6 +308,11 @@
 
   // 世界BOSS
   const assaultBoss = () => {
+    if (isBossOverdraftCoolingDown.value) {
+      isEnd.value = true
+      texts.value.push(`Boss透支冷却中，剩余${bossOverdraftCooldownText.value}`)
+      return
+    }
     // boss生成的时间
     const time = getMinuteDifference(store.boss.time)
     // boss难度根据玩家最高等级 + 转生次数
@@ -287,17 +350,42 @@
     return timeDifferenceInMinutes
   }
 
+  const formatTime = seconds => {
+    seconds = Math.max(0, seconds)
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    const restSeconds = seconds % 60
+    if (hours) return `${hours}小时${minutes}分钟${restSeconds}秒`
+    if (minutes) return `${minutes}分钟${restSeconds}秒`
+    return `${restSeconds}秒`
+  }
+
   onMounted(() => {
+    nowTimer.value = setInterval(() => {
+      now.value = Date.now()
+      if (!isBossOverdraftCoolingDown.value && player.value.bossOverdraftCooldownEnd) {
+        player.value.bossOverdraftCooldownEnd = 0
+        assaultBoss()
+      }
+    }, 1000)
     assaultBoss()
   })
 
   onUnmounted(() => {
     stopFightBoss()
+    clearInterval(nowTimer.value)
   })
 </script>
 
 <style scoped>
   .boss-box .desc {
     margin: 10px 0;
+  }
+
+  .cooldown {
+    color: var(--el-color-warning);
+    font-size: 13px;
+    margin-top: 8px;
+    text-align: center;
   }
 </style>

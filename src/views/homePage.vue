@@ -8,7 +8,6 @@
         <div class="attribute-box">
           <div class="tag attribute" @click="editUserName">
             名字: {{ player.name }}
-            <el-text v-if="player.currentTitle" type="danger">[{{ player.currentTitle }}]</el-text>
             <el-icon>
               <EditPen />
             </el-icon>
@@ -213,8 +212,15 @@
         <div class="tag equip-item">
           <span class="equip">
             <span>道侣:</span>
-            <tag class="pet" v-if="player.wife?.name" closable @close="wifeRevoke" @click="wifeItemShow = true">
-              {{ player.wife?.name }}
+            <tag
+              class="pet wife-tag"
+              v-if="player.wife?.name"
+              :type="computeWifeType(player.wife)"
+              closable
+              @close="wifeRevoke"
+              @click="wifeItemShow = true"
+            >
+              {{ player.wife?.name }}({{ levelNames(player.wife.level || 1) }}/{{ player.wife.reincarnation || 0 }}转)
             </tag>
             <span v-else>无</span>
           </span>
@@ -357,8 +363,14 @@
             <el-tab-pane label="道侣" name="wife">
               <div class="inventory-content">
                 <template v-for="(item, index) in player.wifes" :key="index">
-                  <tag class="inventory-item" closable @close="wifeClose(index)" @click="wifeItemInfo(item)">
-                    {{ item.name }}
+                  <tag
+                    class="inventory-item"
+                    :type="computeWifeType(item)"
+                    closable
+                    @close="wifeClose(index)"
+                    @click="wifeItemInfo(item)"
+                  >
+                    {{ item.name }}({{ levelNames(item.level || 1) }}/{{ item.reincarnation || 0 }}转)
                   </tag>
                 </template>
               </div>
@@ -366,29 +378,43 @@
             <el-tab-pane label="灵石商店" name="lingShiShop">
               <div class="inventory-content">
                 <div style="font-weight: bold; font-size: 13px; margin-bottom: 8px;">购买</div>
-                <div v-for="(item, index) in lingShiShopItems" :key="'buy-'+index" style="margin-bottom: 8px;">
-                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <div v-for="(item, index) in lingShiShopItems" :key="'buy-'+index" class="shop-row">
+                  <div class="shop-row-info">
                     <tag type="primary">{{ item.name }}</tag>
                     <span style="font-size: 12px;">{{ item.price }}灵石/个</span>
-                    <el-button size="small" type="primary" @click="buyMaterial(item)" style="margin-left: auto;">购买</el-button>
                   </div>
-                  <div style="display: flex; align-items: center; gap: 8px;">
-                    <el-slider v-model="item.buyCount" :min="1" :max="Math.max(1, Math.floor(player.props.money / item.price))" style="flex: 1;" />
+                  <div class="shop-row-action">
+                    <el-slider v-model="item.buyCount" :min="1" :max="Math.max(1, Math.floor(player.props.money / item.price))" class="shop-slider" />
                     <span style="font-size: 12px; white-space: nowrap;">x{{ item.buyCount }}</span>
+                    <el-button size="small" type="primary" @click="buyMaterial(item)">购买</el-button>
                   </div>
                 </div>
                 <el-divider />
-                <div style="font-weight: bold; font-size: 13px; margin-bottom: 8px;">出售(5折)</div>
-                <div v-for="(item, index) in lingShiShopItems" :key="'sell-'+index" style="margin-bottom: 8px;">
-                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <div style="font-weight: bold; font-size: 13px; margin-bottom: 8px;">出售</div>
+                <div v-for="(item, index) in lingShiShopItems" :key="'sell-'+index" class="shop-row">
+                  <div class="shop-row-info">
                     <tag type="warning">{{ item.name }}</tag>
                     <span style="font-size: 12px;">{{ item.sellPrice }}灵石/个</span>
                     <span style="font-size: 12px;">拥有: {{ Math.floor(player.props[item.key]) }}</span>
-                    <el-button size="small" type="danger" @click="sellMaterial(item)" style="margin-left: auto;">出售</el-button>
                   </div>
-                  <div style="display: flex; align-items: center; gap: 8px;">
-                    <el-slider v-model="item.sellCount" :min="1" :max="Math.max(1, Math.floor(player.props[item.key]))" style="flex: 1;" />
+                  <div class="shop-row-action">
+                    <el-slider v-model="item.sellCount" :min="1" :max="Math.max(1, Math.floor(player.props[item.key]))" class="shop-slider" />
                     <span style="font-size: 12px; white-space: nowrap;">x{{ item.sellCount }}</span>
+                    <el-button size="small" type="danger" @click="sellMaterial(item)">出售</el-button>
+                  </div>
+                </div>
+                <el-divider />
+                <div style="font-weight: bold; font-size: 13px; margin-bottom: 8px;">兑换境界点</div>
+                <div class="shop-row">
+                  <div class="shop-row-info">
+                    <tag type="success">境界点</tag>
+                    <span style="font-size: 12px;">10000灵石/点</span>
+                    <span style="font-size: 12px;">拥有: {{ formatNumberToChineseUnit(player.props.money) }}灵石</span>
+                  </div>
+                  <div class="shop-row-action">
+                    <el-slider v-model="exchangeCount" :min="1" :max="maxExchangeCount" class="shop-slider" />
+                    <span style="font-size: 12px; white-space: nowrap;">x{{ exchangeCount }}</span>
+                    <el-button size="small" type="success" @click="exchangePoints" :disabled="player.props.money < 10000">兑换</el-button>
                   </div>
                 </div>
               </div>
@@ -449,8 +475,8 @@
     <el-drawer :title="player.wife?.name" v-model="wifeItemShow" direction="rtl" class="strengthen">
       <div class="strengthen-box">
         <div class="attributes">
-          <div class="attribute-box">
-            <div class="tag attribute">境界: {{ levelNames(player.wife.level) }}</div>
+            <div class="attribute-box">
+            <div class="tag attribute">境界: {{ levelNames(player.wife.level || 1) }} ({{ player.wife.reincarnation || 0 }}转)</div>
             <div class="tag attribute">气血: {{ formatNumberToChineseUnit(player.wife.health) }}</div>
             <div class="tag attribute">攻击: {{ formatNumberToChineseUnit(player.wife.attack) }}</div>
             <div class="tag attribute">防御: {{ formatNumberToChineseUnit(player.wife.defense) }}</div>
@@ -460,7 +486,7 @@
             >
               拥有情缘点: {{ formatNumberToChineseUnit(player.props.qingyuan) }}
             </div>
-            <div class="tag attribute">升级消耗: {{ player.wife.level * 2 }}</div>
+            <div class="tag attribute">升级消耗: {{ (player.wife.level || 1) * 2 }}</div>
           </div>
         </div>
         <div class="click-box">
@@ -468,6 +494,7 @@
             {{ player.wife.level >= maxLv ? '道侣等级已满' : '道侣升级' }}
           </el-button>
           <el-button :type="autoWifeUpgradeTimer ? 'danger' : 'warning'" @click="autoWifeUpgradeTimer ? stopAutoWifeUpgrade() : autoWifeUpgrade()" :disabled="player.wife.level >= maxLv">{{ autoWifeUpgradeTimer ? '停止升级' : '一键升级' }}</el-button>
+          <el-button type="success" @click="wifeReincarnationBreakthrough(player.wife)" :disabled="!canWifeReincarnate(player.wife)">道侣转生</el-button>
         </div>
       </div>
     </el-drawer>
@@ -1185,7 +1212,7 @@
 </template>
 <script setup>
   import { useRouter } from 'vue-router'
-  import { ref, computed, watch, onMounted, h } from 'vue'
+  import { ref, computed, watch, onMounted } from 'vue'
   // 标签组件
   import tag from '@/components/tag.vue'
   // 商店
@@ -1198,7 +1225,19 @@
   import equipAll from '@/plugins/equipAll'
   // 成就
   import achievement from '@/plugins/achievement'
-  import { checkAchievements } from '@/plugins/achievementChecker'
+  import {
+    applyCompletedAchievementBonuses,
+    checkAchievements,
+    getAchievementProgress
+  } from '@/plugins/achievementChecker'
+  import {
+    ensurePlayerData,
+    ensureWifeData,
+    recordEquipmentDecompose,
+    recordEquipmentGain,
+    recordStat,
+    setStatMax
+  } from '@/plugins/playerStats'
   import equipTooltip from '@/components/equipTooltip.vue'
   import { ElMessageBox } from 'element-plus'
   import { useMainStore } from '@/plugins/store'
@@ -1217,7 +1256,7 @@
 
   const store = useMainStore()
   const router = useRouter()
-  const ver = ref('2.2.5')
+  const ver = ref('2.2.6')
   // 错误信息
   const err = ref('')
   const show = ref(false)
@@ -1227,6 +1266,7 @@
   const boss = ref(store.boss)
   // 玩家属性
   const player = ref(store.player)
+  ensurePlayerData(player.value)
   // 离线结算
   const offlineSettlementShow = ref(false)
   const offlineMinutes = ref(0)
@@ -1257,6 +1297,7 @@
       return total + Math.floor(Number(lv) || 0)
     }, 0)
     player.value.inventory = inventory.filter(item => !selling.includes(item.quality) || item.lock || keepIds.has(item.id))
+    recordEquipmentDecompose(player.value, toSell.length)
     return { stone, money: toSell.length }
   }
   const simulateOfflineBattles = () => {
@@ -1283,6 +1324,7 @@
       if (!player.value.keepExcessKills || player.value.taskNum < 1080) {
         player.value.taskNum++
       }
+      recordStat(player.value, 'exploreKills')
       const danGain = Math.max(1, Math.floor(Math.random() * player.value.level + 1) * reincarnation)
       player.value.props.cultivateDan += danGain
       kr.cultivateDan = danGain
@@ -1303,12 +1345,14 @@
         if (player.value.inventory.length < player.value.backpackCapacity) {
           player.value.inventory.push(equipItem)
           if (equipItem.quality === 'pink') player.value.pinkEquipCount = (player.value.pinkEquipCount || 0) + 1
+          recordEquipmentGain(player.value, equipItem)
         } else {
           kr.decomposed++
         }
       } else {
         player.value.inventory.push(equipItem)
         if (equipItem.quality === 'pink') player.value.pinkEquipCount = (player.value.pinkEquipCount || 0) + 1
+        recordEquipmentGain(player.value, equipItem)
       }
       // 修为和升级
       if (player.value.level < maxLv) {
@@ -1320,6 +1364,7 @@
           } else {
             player.value.level++
             player.value.points += 3
+            setStatMax(player.value, 'playerLevel', player.value.level)
             player.value.cultivation = 0
             player.value.maxCultivation = Math.floor(100 * Math.pow(2, player.value.level) * reincarnation)
             player.value.taskNum = player.value.keepExcessKills ? Math.max(0, player.value.taskNum - player.value.level) : 0
@@ -1342,7 +1387,9 @@
     player.value.lastOnline = Date.now()
     const headerText = `<span style="color: #409EFF">离线${minutes}分钟，正在回放... 0/${kills} 击杀</span>`
     offlineLogs.value = [headerText]
-    const interval = Math.min(50, Math.floor(20000 / kills))
+    checkAchievements(player.value, 'battle')
+    checkAchievements(player.value, 'forge', player.value)
+    const interval = Math.min(50, Math.floor(10000 / kills))
     offlinePlayTimer.value = setInterval(() => {
       const kr = perKillResults[offlineProgressKills.value]
       offlineSummary.value.cultivateDan += kr.cultivateDan
@@ -1461,11 +1508,15 @@
   })
 
   onMounted(() => {
+    ensurePlayerData(player.value)
     achievementAll.value = achievement.all()
     illustrationsItems.value = equipAll.drawPrize(maxLv)
     // 检查所有成就（钓鱼/装备等可能在其他页面更新）
-    checkAchievements(player.value, 'monster')
-    checkAchievements(player.value, 'equipment', player.value)
+    setStatMax(player.value, 'highestTowerFloor', player.value.highestTowerFloor || 1)
+    setStatMax(player.value, 'age', player.value.age || 1)
+    setStatMax(player.value, 'playerLevel', player.value.level || 1)
+    applyCompletedAchievementBonuses(player.value)
+    checkAchievements(player.value)
     startGame()
   })
 
@@ -1783,6 +1834,8 @@
     player.value.props.money += selling.length
     // 增加炼器石数量
     player.value.props.strengtheningStone += strengtheningStoneTotal
+    recordEquipmentDecompose(player.value, selling.length)
+    checkAchievements(player.value, 'forge', player.value)
     // 清空背包内所有匹配的装备（排除保留和锁定的）
     player.value.inventory = inventory.filter(item => !sellingEquipmen.includes(item.quality) || item.lock || keepIds.has(item.id))
     gameNotifys({
@@ -2034,6 +2087,8 @@
           }
           // 增加炼器等级
           item.strengthen++
+          recordStat(player.value, 'enhanceSuccess')
+          recordStat(player.value, 'enhanceLevelTotal')
           // 重新计算装备评分
           item.score = equip.calculateEquipmentScore(item.dodge, item.attack, item.health, item.critical, item.defense)
           // 发送炼器成功通知
@@ -2043,6 +2098,7 @@
             position: 'top-left'
           })
         } else {
+          recordStat(player.value, 'enhanceFail')
           // 如果炼器等级等于或大于15级并且未开启炼器保护且未开启失败不销毁
           if (item.strengthen >= 15 && !protect.value && !player.value.destroyProtection) {
             // 移除销毁当前装备
@@ -2064,6 +2120,7 @@
         }
         // 扣除炼器石
         player.value.props.strengtheningStone -= calculateCost
+        checkAchievements(player.value, 'forge', player.value)
       })
       .catch(() => {})
   }
@@ -2094,8 +2151,11 @@
         case 'sutra': item.attack += attack; item.health += health; item.defense += defense; playerAttribute(0, attack, health, 0, defense); break
       }
       item.strengthen++
+      recordStat(player.value, 'enhanceSuccess')
+      recordStat(player.value, 'enhanceLevelTotal')
       item.score = equip.calculateEquipmentScore(item.dodge, item.attack, item.health, item.critical, item.defense)
     } else {
+      recordStat(player.value, 'enhanceFail')
       if (item.strengthen >= 15 && !protect.value && !player.value.destroyProtection) {
         player.value.equipment[item.type] = {}
         playerAttribute(-item.dodge, -item.attack, -item.health, -item.critical, -item.defense)
@@ -2104,6 +2164,7 @@
         return 'destroyed'
       }
     }
+    checkAchievements(player.value, 'forge', player.value)
     return success ? 'success' : 'fail'
   }
   const autoEnhance = item => {
@@ -2249,6 +2310,8 @@
           petReincarnation.value = false
           // 增加灵宠转生次数
           player.value.pet.reincarnation++
+          recordStat(player.value, 'petReincarnation')
+          checkAchievements(player.value, 'companion')
           // 发送通知
           gameNotifys({
             title: '灵宠培养提示',
@@ -2258,6 +2321,7 @@
         } else {
           // 增加灵宠等级
           player.value.pet.level++
+          setStatMax(player.value, 'petLevel', player.value.pet.level)
           // 发送通知
           gameNotifys({
             title: '灵宠培养提示',
@@ -2286,6 +2350,7 @@
   }
   // 道侣升级
   const wifeUpgrade = item => {
+    ensureWifeData(item)
     // 计算道侣升级所需材料数量
     const consume = item.level * 2
     // 如果情缘点不足
@@ -2304,11 +2369,12 @@
       confirmButtonText: '确定以及肯定'
     })
       .then(() => {
-        const attack = Math.floor(item.attack * 0.1)
-        const health = Math.floor(item.health * 0.1)
-        const defense = Math.floor(item.defense * 0.1)
+        const attack = Math.max(1, Math.floor(item.initial.attack * 0.1 * (1 + 0.25 * (item.reincarnation || 0))))
+        const health = Math.max(1, Math.floor(item.initial.health * 0.1 * (1 + 0.25 * (item.reincarnation || 0))))
+        const defense = Math.max(1, Math.floor(item.initial.defense * 0.1 * (1 + 0.25 * (item.reincarnation || 0))))
         // 增加道侣等级
         player.value.wife.level++
+        setStatMax(player.value, 'wifeLevel', player.value.wife.level)
         // 发送通知
         gameNotifys({
           title: '道侣升级提示',
@@ -2342,6 +2408,7 @@
     let count = 0
     autoWifeUpgradeTimer.value = setInterval(() => {
       const item = player.value.wife
+      ensureWifeData(item)
       if (item.level >= maxLv) {
         stopAutoWifeUpgrade()
         gameNotifys({ title: '一键道侣升级', message: `已完成！升级${count}次，道侣等级已满`, position: 'top-left' })
@@ -2353,10 +2420,11 @@
         gameNotifys({ title: '一键道侣升级', message: `已停止！升级${count}次，情缘点不足`, position: 'top-left' })
         return
       }
-      const attack = Math.floor(item.attack * 0.1)
-      const health = Math.floor(item.health * 0.1)
-      const defense = Math.floor(item.defense * 0.1)
+      const attack = Math.max(1, Math.floor(item.initial.attack * 0.1 * (1 + 0.25 * (item.reincarnation || 0))))
+      const health = Math.max(1, Math.floor(item.initial.health * 0.1 * (1 + 0.25 * (item.reincarnation || 0))))
+      const defense = Math.max(1, Math.floor(item.initial.defense * 0.1 * (1 + 0.25 * (item.reincarnation || 0))))
       item.level++
+      setStatMax(player.value, 'wifeLevel', item.level)
       item.attack += attack
       item.health += health
       item.defense += defense
@@ -2364,6 +2432,46 @@
       player.value.props.qingyuan -= consume
       count++
     }, 100)
+  }
+  const canWifeReincarnate = item => {
+    ensureWifeData(item)
+    return item?.name && item.level >= maxLv && (item.reincarnation || 0) < (player.value.reincarnation || 0)
+  }
+  const recalcWifeByReincarnation = item => {
+    ensureWifeData(item)
+    const factor = 1 + 0.25 * (item.reincarnation || 0)
+    item.level = 1
+    item.dodge = item.initial.dodge * factor
+    item.critical = item.initial.critical * factor
+    item.attack = Math.floor(item.initial.attack * factor)
+    item.health = Math.floor(item.initial.health * factor)
+    item.defense = Math.floor(item.initial.defense * factor)
+  }
+  const wifeReincarnationBreakthrough = item => {
+    if (!item?.name) return
+    ensureWifeData(item)
+    if (item.level < maxLv) {
+      gameNotifys({ title: '道侣转生提示', message: '道侣境界未满无法转生', position: 'top-left' })
+      return
+    }
+    if ((item.reincarnation || 0) >= (player.value.reincarnation || 0)) {
+      gameNotifys({ title: '道侣转生提示', message: '道侣转生不能高于人物转生', position: 'top-left' })
+      return
+    }
+    ElMessageBox.confirm('道侣转生后等级重置为1，属性按最基础值重新计算，是否继续?', '道侣转生提示', {
+      cancelButtonText: '取消',
+      confirmButtonText: '确定转生'
+    })
+      .then(() => {
+        playerAttribute(-item.dodge, -item.attack, -item.health, -item.critical, -item.defense)
+        item.reincarnation++
+        recalcWifeByReincarnation(item)
+        playerAttribute(item.dodge, item.attack, item.health, item.critical, item.defense)
+        recordStat(player.value, 'wifeReincarnation')
+        checkAchievements(player.value, 'companion')
+        gameNotifys({ title: '道侣转生提示', message: `道侣转生成功，当前为${item.reincarnation}转`, position: 'top-left' })
+      })
+      .catch(() => {})
   }
   // 一键灵宠培养
   const autoPetUpgrading = ref(false)
@@ -2424,8 +2532,11 @@
         item.level = 1
         petReincarnation.value = false
         item.reincarnation++
+        recordStat(player.value, 'petReincarnation')
+        checkAchievements(player.value, 'companion')
       } else {
         item.level++
+        setStatMax(player.value, 'petLevel', item.level)
       }
       item.attack += attack
       item.health += health
@@ -2459,7 +2570,9 @@
         copy.id = Date.now() + i
         player.value.inventory.push(copy)
         if (copy.quality === 'pink') player.value.pinkEquipCount = (player.value.pinkEquipCount || 0) + 1
+        recordEquipmentGain(player.value, copy)
       }
+      checkAchievements(player.value, 'forge', player.value)
       inventoryActive.value = 'equipment'
       equipmentActive.value = item.type
       gameNotifys({
@@ -2472,9 +2585,11 @@
   }
   // 道侣跟随
   const wifeTack = item => {
+    ensureWifeData(item)
     // 如果已经有道侣跟随就收回
     if (JSON.stringify(player.value.wife) != '{}') {
       const itemInfo = player.value.wife
+      ensureWifeData(itemInfo)
       // 更新玩家属性，移除跟随道侣的属性加成
       playerAttribute(-itemInfo.dodge, -itemInfo.attack, -itemInfo.health, -itemInfo.critical, -itemInfo.defense)
       // 收回当前跟随的道侣
@@ -2489,6 +2604,7 @@
   // 道侣收回
   const wifeRevoke = () => {
     const item = player.value.wife
+    ensureWifeData(item)
     // 更新玩家属性，移除当前跟随道侣的属性加成
     playerAttribute(-item.dodge, -item.attack, -item.health, -item.critical, -item.defense)
     // 收回当前跟随的道侣
@@ -2514,11 +2630,13 @@
   }
   // 道侣信息
   const wifeItemInfo = item => {
+    ensureWifeData(item)
     ElMessageBox.confirm('', item.name, {
       center: true,
       message: `<div class="monsterinfo">
       <div class="monsterinfo-box">
-      <p>境界: ${levelNames(item.level)}</p>
+      <p>境界: ${levelNames(item.level || 1)}</p>
+      <p>转生: ${item.reincarnation || 0}转</p>
       <p>气血: ${formatNumberToChineseUnit(item.health)}</p>
       <p>攻击: ${formatNumberToChineseUnit(item.attack)}</p>
       <p>防御: ${formatNumberToChineseUnit(item.defense)}</p>
@@ -2621,6 +2739,8 @@
         newBieBox.value = false
         // 更新玩家装备
         player.value.inventory = newBieData.value
+        newBieData.value.forEach(item => recordEquipmentGain(player.value, item))
+        checkAchievements(player.value, 'forge', player.value)
         // 清空
         newBieData.value = []
         // 修改礼包领取状态
@@ -2651,6 +2771,8 @@
         const num = Math.floor(item.level * (1 + player.value.reincarnation / 3))
         // 增加炼器石数量
         player.value.props.strengtheningStone += num
+        recordEquipmentDecompose(player.value)
+        checkAchievements(player.value, 'forge', player.value)
         // 删除背包装备
         player.value.inventory = player.value.inventory.filter(obj => obj.id !== item.id)
         // 关闭装备信息弹窗
@@ -2701,6 +2823,13 @@
     if (lv >= 10 && lv <= 19) return 'primary'
     if (lv >= 20 && lv <= 29) return 'warning'
     if (lv >= 30) return 'danger'
+  }
+  const computeWifeType = item => {
+    const reincarnation = item?.reincarnation || 0
+    if (reincarnation >= 5) return 'danger'
+    if (reincarnation >= 3) return 'warning'
+    if (reincarnation >= 1) return 'purple'
+    return computePetsLevel(item?.level || 1) || 'success'
   }
 
   // 玩家属性操作
@@ -2908,41 +3037,10 @@
   }
   // 灵石兑换境界点
   const exchangeCount = ref(1)
+  const maxExchangeCount = computed(() => Math.max(1, Math.floor(player.value.props.money / 10000)))
   const openExchangeDialog = () => {
-    exchangeCount.value = 1
-    const maxCount = Math.max(1, Math.floor(player.value.props.money / 10000))
-    ElMessageBox({
-      title: '境界点',
-      message: () => h('div', { style: 'line-height: 2;' }, [
-        h('p', { style: 'margin: 0 0 8px; color: #909399; font-size: 13px;' }, '每提成一次境界可以获得3点境界点'),
-        h('div', { style: 'border-top: 1px solid #ebeef5; padding-top: 12px; margin-top: 4px;' }, [
-          h('div', { style: 'font-weight: bold; font-size: 13px; margin-bottom: 8px;' }, '兑换境界点'),
-          h('div', { style: 'display: flex; align-items: center; gap: 8px; margin-bottom: 4px;' }, [
-            h('span', { style: 'font-size: 12px;' }, `10000灵石/点 | 拥有: ${formatNumberToChineseUnit(player.value.props.money)}灵石`),
-            h(ElButton, {
-              size: 'small',
-              type: 'warning',
-              style: 'margin-left: auto;',
-              disabled: player.value.props.money < 10000,
-              onClick: () => exchangePoints()
-            }, () => '兑换')
-          ]),
-          h('div', { style: 'display: flex; align-items: center; gap: 8px;' }, [
-            h(ElSlider, {
-              modelValue: exchangeCount.value,
-              min: 1,
-              max: maxCount,
-              'onUpdate:modelValue': val => { exchangeCount.value = val },
-              style: 'flex: 1;'
-            }),
-            h('span', { style: 'font-size: 12px; white-space: nowrap;' }, `x${exchangeCount.value}`)
-          ])
-        ])
-      ]),
-      confirmButtonText: '关闭',
-      showCancelButton: false,
-      customStyle: { maxWidth: '400px' }
-    }).catch(() => {})
+    inventoryActive.value = 'lingShiShop'
+    gameNotifys({ title: '境界点', message: '可在灵石商店底部兑换境界点' })
   }
   const exchangePoints = () => {
     const count = exchangeCount.value
@@ -3007,56 +3105,29 @@
 
   // 成就详细
   const achievementInfo = (type, item) => {
-    let message = ''
-    if (
-      item.condition.health ||
-      item.condition.attack ||
-      item.condition.defense ||
-      item.condition.dodge ||
-      item.condition.critical
-    ) {
-      message = `
-    <p>气血: ${item.condition.health || '无要求'}</p>
-    <p>攻击: ${item.condition.attack || '无要求'}</p>
-    <p>防御: ${item.condition.defense || '无要求'}</p>
-    <p>闪避率: ${item.condition.dodge ? (item.condition.dodge * 100).toFixed(2) + '%' : '无要求'}</p>
-    <p>暴击率: ${item.condition.critical ? (item.condition.critical * 100).toFixed(2) + '%' : '无要求'}</p>`
-    } else if (item.condition.level) {
-      message = `<p>达到等级: ${item.condition.level}</p>`
-    } else if (item.condition.monstersDefeated) {
-      message = `<p>击败怪物数量: ${item.condition.monstersDefeated}</p>`
-    } else if (item.condition.money) {
-      message = `<p>累积灵石: ${formatNumberToChineseUnit(item.condition.money)}</p>`
-    } else if (item.condition.fishCount) {
-      message = `<p>累计钓鱼次数: ${item.condition.fishCount}</p>`
-    } else if (item.condition.maxFishWeight) {
-      message = `<p>最大鱼重: ${item.condition.maxFishWeight}斤</p>`
-    } else if (item.condition.pinkEquipCount) {
-      message = `<p>仙阶装备数量: ${item.condition.pinkEquipCount}</p>`
-    }
-    if (item.desc) {
-      message += `<p>描述: ${item.desc}</p>`
-    }
+    const progress = getAchievementProgress(player.value, item)
+    let message = progress
+      .map(progressItem => {
+        return `<p>${formatConditionName(progressItem.key)}: ${formatProgressValue(progressItem.current, progressItem.key)} / ${formatProgressValue(progressItem.target, progressItem.key)}</p>`
+      })
+      .join('')
+    if (item.desc) message += `<p>描述: ${item.desc}</p>`
     message += `<p>完成奖励: ${item.award}培养丹</p>`
-    message += `<p>称号加成: ${formatTitleBonus(item.titleBonus)}</p>`
+    message += `<p>永久加成: ${formatTitleBonus(item.titleBonus)}</p>`
     const isCompleted = getTagClass(type, item.id)
-    const isWearing = player.value.currentTitle === item.name
+    message += `<p>状态: ${isCompleted ? '已完成，奖励已自动生效' : '未完成'}</p>`
     ElMessageBox.confirm('', `${item.name}`, {
       center: true,
       message: `<div class="monsterinfo"><div class="monsterinfo-box">${message}</div></div>`,
-      cancelButtonText: '关闭',
-      showCancelButton: isCompleted,
-      confirmButtonText: isCompleted ? (isWearing ? '取消佩戴' : '佩戴称号') : '知道了',
+      showCancelButton: false,
+      confirmButtonText: '知道了',
       dangerouslyUseHTMLString: true
-    })
-      .then(() => {
-        if (isCompleted) toggleTitle(item)
-      })
-      .catch(() => {})
+    }).catch(() => {})
   }
 
   // 新增方法
   const formatTitleBonus = bonus => {
+    if (!bonus || !Object.keys(bonus).length) return '无'
     return Object.entries(bonus)
       .map(([key, value]) => {
         const num = value > 1 ? value : `${value * 100}%`
@@ -3065,62 +3136,51 @@
       .join(', ')
   }
 
-  const toggleTitle = achievement => {
-    if (player.value.currentTitle === achievement.name) {
-      // 取消佩戴称号
-      applyTitleBonus(achievement.titleBonus, false)
-      player.value.currentTitle = null
-      gameNotifys({
-        title: '称号系统',
-        message: `你取消佩戴了称号"${achievement.name}"`
-      })
-    } else {
-      // 佩戴新称号
-      if (player.value.currentTitle) {
-        // 如果已经佩戴了称号，先移除旧称号的加成
-        const oldAchievement = findAchievementByTitle(player.value.currentTitle)
-        if (oldAchievement) applyTitleBonus(oldAchievement.titleBonus, false)
-      }
-      applyTitleBonus(achievement.titleBonus, true)
-      player.value.currentTitle = achievement.name
-      gameNotifys({
-        title: '称号系统',
-        message: `你佩戴了称号"${achievement.name}"`
-      })
+  const formatConditionName = key => {
+    const names = {
+      health: '气血',
+      attack: '攻击',
+      defense: '防御',
+      dodge: '闪避率',
+      critical: '暴击率',
+      age: '年纪',
+      gameWins: '小游戏胜利',
+      fishCount: '钓鱼次数',
+      maxFishWeight: '最大鱼重',
+      bossDefeated: 'Boss击败',
+      deathCount: '死亡次数',
+      playerReincarnation: '人物转生',
+      playerLevel: '人物境界',
+      petReincarnation: '灵宠转生',
+      petLevel: '灵宠境界',
+      wifeReincarnation: '道侣转生',
+      wifeLevel: '道侣境界',
+      wifeCount: '道侣数量',
+      wifeMarried: '结为道侣',
+      thunderStruck: '被雷劈',
+      equipmentDecomposed: '装备分解',
+      enhanceSuccess: '炼器成功',
+      enhanceFail: '炼器失败',
+      enhanceLevelTotal: '炼器等级累计',
+      highestTowerFloor: '无尽塔层数',
+      mapSteps: '探索步数',
+      exploreKills: '探索击杀',
+      'equipmentQualityGained.info': '黄阶装备',
+      'equipmentQualityGained.success': '玄阶装备',
+      'equipmentQualityGained.primary': '地阶装备',
+      'equipmentQualityGained.purple': '天阶装备',
+      'equipmentQualityGained.warning': '帝阶装备',
+      'equipmentQualityGained.danger': '神阶装备',
+      'equipmentQualityGained.pink': '仙阶装备'
     }
+    return names[key] || key
   }
 
-  const applyTitleBonus = (bonus, isApplying) => {
-    const multiplier = isApplying ? 1 : -1
-    let dodge = 0,
-      attack = 0,
-      health = 0,
-      critical = 0,
-      defense = 0
-    Object.entries(bonus).forEach(([key, value]) => {
-      switch (key) {
-        case 'dodge':
-          dodge += value * multiplier
-          break
-        case 'attack':
-          attack += value * multiplier
-          break
-        case 'health':
-          health += value * multiplier
-          break
-        case 'critical':
-          critical += value * multiplier
-          break
-        case 'defense':
-          defense += value * multiplier
-          break
-        default:
-      }
-    })
-    playerAttribute(dodge, attack, health, critical, defense)
-  }
-  const findAchievementByTitle = title => {
-    return achievementAll.value.flatMap(category => category.data).find(ach => ach.name === title)
+  const formatProgressValue = (value, key) => {
+    value = value || 0
+    if (['dodge', 'critical'].includes(key)) return `${(value * 100).toFixed(2)}%`
+    if (key === 'maxFishWeight') return `${value}斤`
+    return formatNumberToChineseUnit(value)
   }
 
   // 图鉴装备信息
@@ -3203,6 +3263,34 @@
 
   .inventory-item {
     margin: 4px;
+  }
+
+  .shop-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .shop-row-info {
+    display: flex;
+    align-items: center;
+    flex: 0 0 230px;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .shop-row-action {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    gap: 8px;
+    min-width: 180px;
+  }
+
+  .shop-slider {
+    flex: 1;
+    min-width: 80px;
   }
 
   .dialog-footer {
@@ -3385,6 +3473,15 @@
 
     .achievement-item {
       width: 50%;
+    }
+
+    .shop-row {
+      flex-wrap: wrap;
+    }
+
+    .shop-row-info,
+    .shop-row-action {
+      flex: 1 1 100%;
     }
 
     .backtop {

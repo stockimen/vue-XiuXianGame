@@ -35,6 +35,8 @@
   import { useMainStore } from '@/plugins/store'
   import equip from '@/plugins/equip'
   import { maxLv, smoothScrollToBottom, levelNames, gameNotifys } from '@/plugins/game'
+  import { checkAchievements } from '@/plugins/achievementChecker'
+  import { recordStat } from '@/plugins/playerStats'
   import { ElMessageBox } from 'element-plus'
 
   const store = useMainStore()
@@ -111,6 +113,8 @@
       // 减少修为
       case 'lucky':
         player.value.cultivation -= player.value.cultivation * 0.1
+        recordStat(player.value, 'thunderStruck')
+        checkAchievements(player.value, 'cultivate')
         break
       // 增加攻击力
       case 'skill':
@@ -193,6 +197,10 @@
             player.value.cultivation = 0
             player.value.maxCultivation = 100
             player.value.reincarnation++
+            recordStat(player.value, 'playerReincarnation')
+            checkAchievements(player.value, 'cultivate').forEach(item => {
+              gameNotifys({ title: '获得成就提示', message: `恭喜你完成了${item.name}成就` })
+            })
             player.value.backpackCapacity += 50
             gameNotifys({
               title: '转生提示',

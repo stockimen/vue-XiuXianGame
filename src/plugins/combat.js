@@ -5,7 +5,7 @@ export default {
     let minDamage = Math.max(1, Math.floor(attacker.attack * 0.05)) // 攻击力的5%保底
     let damage = Math.max(baseDamage, minDamage)
     // 闪避判定
-    const isHit = Math.random() > defender.dodge
+    const isHit = Math.random() > Math.min(defender.dodge || 0, 0.7)
     if (!isHit) return { damage: 0, isCritical: false, isHit: false }
     // 暴击判定
     let isCritical = false

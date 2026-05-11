@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import crypto from '@/plugins/crypto'
+import { createDefaultStats, ensurePlayerData } from '@/plugins/playerStats'
 
 export const useMainStore = defineStore('main', {
   state: () => ({
@@ -88,6 +89,7 @@ export const useMainStore = defineStore('main', {
         gamblingStone: null
       },
       sweepCooldownEnd: 0,
+      bossOverdraftCooldownEnd: 0,
       gameWins: 0,
       gameLosses: 0,
       checkinDays: 0,
@@ -95,6 +97,8 @@ export const useMainStore = defineStore('main', {
       lastCheckinDate: null,
       fortuneTellingDate: null,
       checkedInToday: false,
+      achievementBonusApplied: [],
+      stats: createDefaultStats(),
       fishCount: 0,
       maxFishWeight: 0,
       pinkEquipCount: 0,
@@ -147,9 +151,11 @@ export const useMainStore = defineStore('main', {
       },
       deserialize: value => {
         const state = JSON.parse(value)
+        const player = crypto.decryption(state.player)
+        ensurePlayerData(player)
         return {
           boss: crypto.decryption(state.boss),
-          player: crypto.decryption(state.player)
+          player
         }
       }
     }

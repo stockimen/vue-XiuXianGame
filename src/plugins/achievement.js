@@ -1,265 +1,111 @@
 const achievement = {
-  // 所有成就
   all() {
     return [
-      {
-        name: '灵宠成就',
-        type: 'pet',
-        data: this.pet()
-      },
-      {
-        name: '探索成就',
-        type: 'monster',
-        data: this.monster()
-      },
-      {
-        name: '装备成就',
-        type: 'equipment',
-        data: this.equipment()
-      }
+      { name: '修炼之路', type: 'cultivate', data: this.cultivate() },
+      { name: '灵宠与道侣', type: 'companion', data: this.companion() },
+      { name: '战斗与探索', type: 'battle', data: this.battle() },
+      { name: '装备与炼器', type: 'forge', data: this.forge() }
     ]
   },
-  // 灵宠相关成就
-  pet() {
+  cultivate() {
     return [
-      {
-        // 成就ID
-        id: 1,
-        // 成就名称
-        name: '气血神宠',
-        // 成就奖励
-        award: 1000,
-        //佩戴奖励
-        titleBonus: {
-          health: 5000
-        },
-        //达成条件
-        condition: {
-          dodge: 0,
-          health: 23500,
-          attack: 0,
-          defense: 0,
-          critical: 0
-        }
-      },
-      {
-        id: 2,
-        name: '攻击神宠',
-        award: 1000,
-        titleBonus: {
-          attack: 1000
-        },
-        condition: {
-          dodge: 0,
-          health: 0,
-          attack: 7050,
-          defense: 0,
-          critical: 0
-        }
-      },
-      {
-        id: 3,
-        name: '防御神宠',
-        award: 1000,
-        titleBonus: {
-          defense: 100
-        },
-        condition: {
-          dodge: 0,
-          health: 0,
-          attack: 0,
-          defense: 705,
-          critical: 0
-        }
-      },
-      {
-        id: 4,
-        name: '闪避神宠',
-        award: 1000,
-        titleBonus: {
-          dodge: 0.1
-        },
-        condition: {
-          dodge: 0.47,
-          health: 0,
-          attack: 0,
-          defense: 0,
-          critical: 0
-        }
-      },
-      {
-        id: 5,
-        name: '暴击神宠',
-        award: 1000,
-        titleBonus: {
-          critical: 0.1
-        },
-        condition: {
-          dodge: 0,
-          health: 0,
-          attack: 0,
-          defense: 0,
-          critical: 0.47
-        }
-      },
-      {
-        id: 6,
-        name: '灵宠天花板',
-        titleBonus: {
-          attack: 2500
-        },
-        award: 10000,
-        condition: {
-          dodge: 0.47,
-          health: 23500,
-          attack: 7050,
-          defense: 705,
-          critical: 0.47
-        }
-      }
+      this.create(1, '初入仙途', '人物境界达到天仙一层', 'stats', { playerLevel: 36 }, { dodge: 0.002 }, 2000),
+      this.create(2, '小有所成', '人物境界达到金仙一层', 'stats', { playerLevel: 81 }, { critical: 0.003 }, 5000),
+      this.create(3, '大道将成', '人物境界达到九天玄仙九层', 'stats', { playerLevel: 144 }, { dodge: 0.005 }, 15000),
+      this.create(4, '一转入道', '人物转生1次', 'stats', { playerReincarnation: 1 }, { critical: 0.003 }, 5000),
+      this.create(5, '三转归真', '人物转生3次', 'stats', { playerReincarnation: 3 }, { dodge: 0.005 }, 15000),
+      this.create(6, '五转证道', '人物转生5次', 'stats', { playerReincarnation: 5 }, { dodge: 0.005, critical: 0.005 }, 30000),
+      this.create(7, '百岁修仙', '寿元达到100岁', 'stats', { age: 100 }, { critical: 0.001 }, 1000),
+      this.create(8, '千岁长生', '寿元达到1000岁', 'stats', { age: 1000 }, { dodge: 0.003 }, 10000),
+      this.create(9, '万岁不老', '寿元达到10000岁', 'stats', { age: 10000 }, { critical: 0.005 }, 20000),
+      this.create(10, '天雷初临', '打坐被雷劈10次', 'stats', { thunderStruck: 10 }, { dodge: 0.002 }, 3000),
+      this.create(11, '雷劫洗礼', '打坐被雷劈50次', 'stats', { thunderStruck: 50 }, { critical: 0.004 }, 8000),
+      this.create(12, '雷劫淬体', '打坐被雷劈200次', 'stats', { thunderStruck: 200 }, { dodge: 0.005 }, 15000),
+      this.create(13, '万雷不灭', '打坐被雷劈1000次', 'stats', { thunderStruck: 1000 }, { critical: 0.008 }, 30000),
+      this.create(14, '雷道大成', '打坐被雷劈5000次', 'stats', { thunderStruck: 5000 }, { dodge: 0.01 }, 50000)
     ]
   },
-  // 装备相关成就
-  equipment() {
+  companion() {
     return [
-      {
-        id: 1,
-        name: '仙器猎人',
-        desc: '获得1件仙阶装备',
-        titleBonus: {
-          attack: 2000
-        },
-        award: 10000,
-        condition: {
-          pinkEquipCount: 1
-        }
-      },
-      {
-        id: 2,
-        name: '仙器收藏家',
-        desc: '获得5件仙阶装备',
-        titleBonus: {
-          attack: 10000
-        },
-        award: 50000,
-        condition: {
-          pinkEquipCount: 5
-        }
-      }
+      this.create(1, '气血神宠', '灵宠气血达到23500', 'pet', { health: 23500 }, { critical: 0.005 }, 1000),
+      this.create(2, '攻击神宠', '灵宠攻击达到7050', 'pet', { attack: 7050 }, { dodge: 0.005 }, 1000),
+      this.create(3, '防御神宠', '灵宠防御达到705', 'pet', { defense: 705 }, { dodge: 0.003 }, 1000),
+      this.create(4, '闪避神宠', '灵宠闪避率达到47%', 'pet', { dodge: 0.47 }, { dodge: 0.01 }, 1000),
+      this.create(5, '暴击神宠', '灵宠暴击率达到47%', 'pet', { critical: 0.47 }, { critical: 0.01 }, 1000),
+      this.create(
+        6, '灵宠天花板', '灵宠全属性达标', 'pet',
+        { dodge: 0.47, health: 23500, attack: 7050, defense: 705, critical: 0.47 },
+        { dodge: 0.005, critical: 0.005 }, 10000
+      ),
+      this.create(7, '灵宠初境', '灵宠境界达到50', 'stats', { petLevel: 50 }, { critical: 0.002 }, 2000),
+      this.create(8, '灵宠大成', '灵宠境界达到满级', 'stats', { petLevel: 144 }, { dodge: 0.005 }, 8000),
+      this.create(9, '灵宠一转', '灵宠转生1次', 'stats', { petReincarnation: 1 }, { critical: 0.002 }, 3000),
+      this.create(10, '灵宠五转', '灵宠转生5次', 'stats', { petReincarnation: 5 }, { dodge: 0.005 }, 15000),
+      this.create(11, '情定今生', '拥有1位道侣', 'stats', { wifeCount: 1 }, { dodge: 0.002 }, 3000),
+      this.create(12, '风流仙人', '拥有3位道侣', 'stats', { wifeCount: 3 }, { critical: 0.003 }, 5000),
+      this.create(13, '情场得意', '拥有5位道侣', 'stats', { wifeCount: 5 }, { dodge: 0.005 }, 10000),
+      this.create(14, '坐拥佳丽', '拥有10位道侣', 'stats', { wifeCount: 10 }, { dodge: 0.008, critical: 0.005 }, 20000),
+      this.create(15, '道侣初境', '道侣境界达到50', 'stats', { wifeLevel: 50 }, { critical: 0.002 }, 2000),
+      this.create(16, '道侣大成', '道侣境界达到满级', 'stats', { wifeLevel: 144 }, { dodge: 0.004 }, 8000),
+      this.create(17, '道侣一转', '道侣转生1次', 'stats', { wifeReincarnation: 1 }, { critical: 0.003 }, 5000),
+      this.create(18, '道侣五转', '道侣转生5次', 'stats', { wifeReincarnation: 5 }, { dodge: 0.006 }, 12000)
     ]
   },
-  // 打怪相关成就
-  monster() {
+  battle() {
     return [
-      {
-        id: 7,
-        name: '挑战者',
-        desc: '通关无尽塔100层',
-        titleBonus: {
-          critical: 0.05
-        },
-        award: 10000,
-        condition: {
-          highestTowerFloor: 100
-        }
-      },
-      {
-        id: 8,
-        name: '征服者',
-        desc: '通关无尽塔1000层',
-        titleBonus: {
-          critical: 0.1
-        },
-        award: 10000,
-        condition: {
-          highestTowerFloor: 1000
-        }
-      },
-      {
-        id: 9,
-        name: '长生者',
-        desc: '寿元达到1000岁',
-        titleBonus: {
-          health: 10000
-        },
-        award: 10000,
-        condition: {
-          age: 1000
-        }
-      },
-      {
-        id: 10,
-        name: '幸运之星',
-        desc: '小游戏胜利超过10次',
-        titleBonus: {
-          defense: 100
-        },
-        award: 10000,
-        condition: {
-          gameWins: 10
-        }
-      },
-      {
-        id: 11,
-        name: '天选之子',
-        desc: '小游戏胜利超过100次',
-        titleBonus: {
-          defense: 1000
-        },
-        award: 10000,
-        condition: {
-          gameWins: 100
-        }
-      },
-      {
-        id: 12,
-        name: '渔夫',
-        desc: '累计钓鱼超过100次',
-        titleBonus: {
-          defense: 200
-        },
-        award: 5000,
-        condition: {
-          fishCount: 100
-        }
-      },
-      {
-        id: 13,
-        name: '钓鱼大师',
-        desc: '累计钓鱼超过500次',
-        titleBonus: {
-          defense: 1000
-        },
-        award: 10000,
-        condition: {
-          fishCount: 500
-        }
-      },
-      {
-        id: 14,
-        name: '大鱼传说',
-        desc: '钓到超过20斤的鱼',
-        titleBonus: {
-          health: 5000
-        },
-        award: 5000,
-        condition: {
-          maxFishWeight: 20
-        }
-      },
-      {
-        id: 15,
-        name: '海王',
-        desc: '钓到超过30斤的鱼',
-        titleBonus: {
-          health: 50000
-        },
-        award: 10000,
-        condition: {
-          maxFishWeight: 30
-        }
-      }
+      this.create(1, '斩妖新锐', '击杀100个怪物', 'stats', { exploreKills: 100 }, { critical: 0.002 }, 3000),
+      this.create(2, '斩妖有成', '击杀500个怪物', 'stats', { exploreKills: 500 }, { dodge: 0.003 }, 8000),
+      this.create(3, '斩妖宗师', '击杀2000个怪物', 'stats', { exploreKills: 2000 }, { critical: 0.005 }, 15000),
+      this.create(4, '斩妖无极', '击杀10000个怪物', 'stats', { exploreKills: 10000 }, { dodge: 0.005 }, 25000),
+      this.create(5, '万妖屠戮', '击杀100000个怪物', 'stats', { exploreKills: 100000 }, { critical: 0.008 }, 50000),
+      this.create(6, '初斩魔尊', '击败世界Boss1次', 'stats', { bossDefeated: 1 }, { dodge: 0.002 }, 5000),
+      this.create(7, 'Boss猎手', '击败世界Boss10次', 'stats', { bossDefeated: 10 }, { critical: 0.004 }, 12000),
+      this.create(8, 'Boss克星', '击败世界Boss50次', 'stats', { bossDefeated: 50 }, { dodge: 0.006 }, 30000),
+      this.create(9, '挑战者', '通关无尽塔100层', 'stats', { highestTowerFloor: 100 }, { critical: 0.005 }, 10000),
+      this.create(10, '征服者', '通关无尽塔500层', 'stats', { highestTowerFloor: 500 }, { dodge: 0.005 }, 15000),
+      this.create(11, '无尽之巅', '通关无尽塔1000层', 'stats', { highestTowerFloor: 1000 }, { critical: 0.01 }, 30000),
+      this.create(12, '秘境行者', '探索移动100步', 'stats', { mapSteps: 100 }, { dodge: 0.002 }, 3000),
+      this.create(13, '秘境老手', '探索移动500步', 'stats', { mapSteps: 500 }, { critical: 0.003 }, 8000),
+      this.create(14, '秘境传奇', '探索移动2000步', 'stats', { mapSteps: 2000 }, { dodge: 0.005 }, 15000),
+      this.create(15, '足迹遍野', '探索移动10000步', 'stats', { mapSteps: 10000 }, { critical: 0.006 }, 25000),
+      this.create(16, '万步踏天', '探索移动100000步', 'stats', { mapSteps: 100000 }, { dodge: 0.008 }, 40000),
+      this.create(17, '渔夫', '累计钓鱼50次', 'player', { fishCount: 50 }, { dodge: 0.002 }, 3000),
+      this.create(18, '钓鱼大师', '累计钓鱼200次', 'player', { fishCount: 200 }, { critical: 0.004 }, 8000),
+      this.create(19, '钓鱼宗师', '累计钓鱼500次', 'player', { fishCount: 500 }, { dodge: 0.006 }, 15000),
+      this.create(20, '大鱼传说', '钓到超过20斤的鱼', 'player', { maxFishWeight: 20 }, { critical: 0.003 }, 5000),
+      this.create(21, '海王', '钓到超过30斤的鱼', 'player', { maxFishWeight: 30 }, { dodge: 0.005 }, 10000),
+      this.create(22, '幸运之星', '小游戏胜利10次', 'player', { gameWins: 10 }, { dodge: 0.002 }, 5000),
+      this.create(23, '天选之子', '小游戏胜利100次', 'player', { gameWins: 100 }, { critical: 0.005 }, 10000),
+      this.create(24, '死中求道', '累计死亡10次', 'stats', { deathCount: 10 }, { dodge: 0.003 }, 3000),
+      this.create(25, '百折不回', '累计死亡100次', 'stats', { deathCount: 100 }, { critical: 0.006 }, 12000)
     ]
+  },
+  forge() {
+    return [
+      this.create(1, '初试分解', '分解10件装备', 'stats', { equipmentDecomposed: 10 }, { dodge: 0.002 }, 2000),
+      this.create(2, '分解专家', '分解50件装备', 'stats', { equipmentDecomposed: 50 }, { critical: 0.003 }, 5000),
+      this.create(3, '化整为零', '分解200件装备', 'stats', { equipmentDecomposed: 200 }, { dodge: 0.005 }, 12000),
+      this.create(4, '拆解大师', '分解2000件装备', 'stats', { equipmentDecomposed: 2000 }, { critical: 0.008 }, 30000),
+      this.create(5, '粉碎虚空', '分解20000件装备', 'stats', { equipmentDecomposed: 20000 }, { dodge: 0.01 }, 60000),
+      this.create(6, '炼器入门', '炼器成功10次', 'stats', { enhanceSuccess: 10 }, { critical: 0.002 }, 3000),
+      this.create(7, '百炼成钢', '炼器成功100次', 'stats', { enhanceSuccess: 100 }, { dodge: 0.004 }, 10000),
+      this.create(8, '炼器大师', '炼器成功500次', 'stats', { enhanceSuccess: 500 }, { critical: 0.006 }, 25000),
+      this.create(9, '屡败屡炼', '炼器失败50次', 'stats', { enhanceFail: 50 }, { dodge: 0.003 }, 5000),
+      this.create(10, '失败是成功之母', '炼器失败200次', 'stats', { enhanceFail: 200 }, { critical: 0.005 }, 10000),
+      this.create(11, '千锤百炼', '累计提升炼器等级100级', 'stats', { enhanceLevelTotal: 100 }, { dodge: 0.004 }, 12000),
+      this.create(12, '万锻之魂', '累计提升炼器等级500级', 'stats', { enhanceLevelTotal: 500 }, { critical: 0.007 }, 25000),
+      this.create(13, '仙器猎人', '获得1件仙阶装备', 'stats', { 'equipmentQualityGained.pink': 1 }, { critical: 0.003 }, 10000),
+      this.create(14, '仙器收藏家', '获得5件仙阶装备', 'stats', { 'equipmentQualityGained.pink': 5 }, { dodge: 0.005 }, 50000),
+      this.create(15, '玄阶收藏', '获得20件玄阶装备', 'stats', { 'equipmentQualityGained.success': 20 }, { critical: 0.002 }, 2000),
+      this.create(16, '地阶收藏', '获得20件地阶装备', 'stats', { 'equipmentQualityGained.primary': 20 }, { dodge: 0.002 }, 3000),
+      this.create(17, '天阶收藏', '获得10件天阶装备', 'stats', { 'equipmentQualityGained.purple': 10 }, { critical: 0.003 }, 5000),
+      this.create(18, '帝阶收藏', '获得10件帝阶装备', 'stats', { 'equipmentQualityGained.warning': 10 }, { dodge: 0.004 }, 8000),
+      this.create(19, '神阶收藏', '获得5件神阶装备', 'stats', { 'equipmentQualityGained.danger': 5 }, { critical: 0.005 }, 10000)
+    ]
+  },
+  create(id, name, desc, conditionSource, condition, titleBonus, award) {
+    return { id, name, desc, award, titleBonus, conditionSource, condition }
   }
 }
+
 export default achievement
