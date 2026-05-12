@@ -19,9 +19,9 @@
       <el-button
         type="warning"
         @click="startOverdraftBoss"
-        :disabled="isEnd || isBossOverdraftCoolingDown || player.reincarnation <= 0"
+        :disabled="isEnd || isBossOverdraftCoolingDown"
       >
-        透支连战{{ player.reincarnation > 0 ? `(${player.reincarnation}次)` : '' }}
+        透支连战{{ `(${(player.reincarnation + 1) * 12}次/${player.reincarnation + 1}小时)` }}
       </el-button>
       <el-button @click="router.push('/home')">回家疗伤</el-button>
     </div>
@@ -83,9 +83,9 @@
   }
 
   const startOverdraftBoss = () => {
-    if (isEnd.value || isBossOverdraftCoolingDown.value || player.value.reincarnation <= 0) return
+    if (isEnd.value || isBossOverdraftCoolingDown.value) return
     overdraftMode.value = true
-    overdraftRemaining.value = player.value.reincarnation
+    overdraftRemaining.value = (player.value.reincarnation + 1) * 12
     texts.value.push(`你透支气运，准备连续挑战${overdraftRemaining.value}次世界Boss。`)
     startFightBoss()
   }
@@ -98,7 +98,7 @@
 
   const finishOverdraftBoss = () => {
     if (!overdraftMode.value) return
-    const hours = player.value.reincarnation || 0
+    const hours = player.value.reincarnation + 1
     if (hours > 0) {
       player.value.bossOverdraftCooldownEnd = Date.now() + hours * 3600 * 1000
       texts.value.push(`透支连战结束，世界Boss进入${hours}小时冷却。`)
@@ -229,6 +229,17 @@
           currency.value = boss.getRandomInt(10, 30)
           guashaRounds.value = 50
           texts.value.push(`透支连战继续，剩余${overdraftRemaining.value}次。`)
+          // 重启战斗定时器
+          stopFightBoss()
+          const zs = player.value.reincarnation * 10
+          const time = zs >= 200 ? 100 : 300 - zs
+          const timerId = setInterval(() => {
+            fightBoss()
+            const element = scrollbar.value?.wrapRef
+            const observer = new MutationObserver(() => smoothScrollToBottom(element))
+            observer.observe(element, { childList: true, subtree: true })
+          }, time)
+          timerIds.value.push(timerId)
         } else {
           isEnd.value = true
           // 修改boss状态
@@ -313,6 +324,7 @@
       texts.value.push(`Boss透支冷却中，剩余${bossOverdraftCooldownText.value}`)
       return
     }
+    isEnd.value = false
     // boss生成的时间
     const time = getMinuteDifference(store.boss.time)
     // boss难度根据玩家最高等级 + 转生次数

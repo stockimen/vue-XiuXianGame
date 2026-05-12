@@ -39,19 +39,19 @@
           </div>
           <div class="tag attribute">
             气血: {{ formatNumberToChineseUnit(player.health) }} / {{ formatNumberToChineseUnit(player.maxHealth) }}
-            <el-icon v-if="player.points > 0" @click="attributePoints('health')" @mousedown="startAddPoints('health')" @mouseup="stopAddPoints" @mouseleave="stopAddPoints" @touchend="stopAddPoints">
+            <el-icon v-if="player.points > 0" @click="attributePoints('health')" @mousedown="startAddPoints('health')" @mouseup="stopAddPoints" @mouseleave="stopAddPoints" @touchstart="startAddPoints('health')" @touchend="stopAddPoints" @touchmove="stopAddPoints">
               <CirclePlus />
             </el-icon>
           </div>
           <div class="tag attribute">
             攻击: {{ formatNumberToChineseUnit(player.attack) }}
-            <el-icon v-if="player.points > 0" @click="attributePoints('attack')" @mousedown="startAddPoints('attack')" @mouseup="stopAddPoints" @mouseleave="stopAddPoints" @touchend="stopAddPoints">
+            <el-icon v-if="player.points > 0" @click="attributePoints('attack')" @mousedown="startAddPoints('attack')" @mouseup="stopAddPoints" @mouseleave="stopAddPoints" @touchstart="startAddPoints('attack')" @touchend="stopAddPoints" @touchmove="stopAddPoints">
               <CirclePlus />
             </el-icon>
           </div>
           <div class="tag attribute">
             防御: {{ formatNumberToChineseUnit(player.defense) }}
-            <el-icon v-if="player.points > 0" @click="attributePoints('defense')" @mousedown="startAddPoints('defense')" @mouseup="stopAddPoints" @mouseleave="stopAddPoints" @touchend="stopAddPoints">
+            <el-icon v-if="player.points > 0" @click="attributePoints('defense')" @mousedown="startAddPoints('defense')" @mouseup="stopAddPoints" @mouseleave="stopAddPoints" @touchstart="startAddPoints('defense')" @touchend="stopAddPoints" @touchmove="stopAddPoints">
               <CirclePlus />
             </el-icon>
           </div>
@@ -1127,7 +1127,7 @@
                   :key="index"
                   @click="achievementInfo(i.type, item)"
                 >
-                  <tag :type="getTagClass(i.type, item.id) ? 'success' : 'info'">
+                  <tag :type="achievementCategoryColor(item, getTagClass(i.type, item.id))">
                     {{ item.name }}
                     ({{ getTagClass(i.type, item.id) ? '已完成' : '未完成' }})
                   </tag>
@@ -1256,7 +1256,7 @@
 
   const store = useMainStore()
   const router = useRouter()
-  const ver = ref('2.2.6')
+  const ver = ref('2.2.7')
   // 错误信息
   const err = ref('')
   const show = ref(false)
@@ -1296,6 +1296,8 @@
       let lv = i.level + (i.level * player.value.reincarnation) / 10
       return total + Math.floor(Number(lv) || 0)
     }, 0)
+    const pinkCount = toSell.filter(i => i.quality === 'pink').length
+    if (pinkCount > 0) player.value.props.currency += pinkCount * (Math.floor(Math.random() * 6) + 1)
     player.value.inventory = inventory.filter(item => !selling.includes(item.quality) || item.lock || keepIds.has(item.id))
     recordEquipmentDecompose(player.value, toSell.length)
     return { stone, money: toSell.length }
@@ -1493,7 +1495,7 @@
   const AllEquipmenType = ref(['info', 'success', 'primary', 'purple', 'warning', 'danger', 'pink'])
   // 灵宠转生勾选状态
   const petReincarnation = ref(false)
-  const achievementActive = ref('pet')
+  const achievementActive = ref('cultivate')
   const inventoryCollapse = ref('')
   const petDropdownActive = ref('')
   const illustrationsItems = ref([])
@@ -1834,6 +1836,9 @@
     player.value.props.money += selling.length
     // 增加炼器石数量
     player.value.props.strengtheningStone += strengtheningStoneTotal
+    // 仙阶装备额外获得鸿蒙石
+    const pinkCount = selling.filter(i => i.quality === 'pink').length
+    if (pinkCount > 0) player.value.props.currency += pinkCount * (Math.floor(Math.random() * 6) + 1)
     recordEquipmentDecompose(player.value, selling.length)
     checkAchievements(player.value, 'forge', player.value)
     // 清空背包内所有匹配的装备（排除保留和锁定的）
@@ -2771,6 +2776,13 @@
         const num = Math.floor(item.level * (1 + player.value.reincarnation / 3))
         // 增加炼器石数量
         player.value.props.strengtheningStone += num
+        // 仙阶装备额外获得鸿蒙石
+        let currencyMsg = ''
+        if (item.quality === 'pink') {
+          const currencyGain = Math.floor(Math.random() * 6) + 1
+          player.value.props.currency += currencyGain
+          currencyMsg = `和${currencyGain}块鸿蒙石`
+        }
         recordEquipmentDecompose(player.value)
         checkAchievements(player.value, 'forge', player.value)
         // 删除背包装备
@@ -2780,7 +2792,7 @@
         // 装备分解通知
         gameNotifys({
           title: '背包装备售卖提示',
-          message: `${item.name}已成功卖出, 你获得了${num}个炼器石`
+          message: `${item.name}已成功卖出, 你获得了${num}个炼器石${currencyMsg}`
         })
       })
       .catch(() => {})
@@ -3101,6 +3113,11 @@
   const getTagClass = (type, index) => {
     const achievements1 = player.value.achievement[type] || []
     return Array.isArray(achievements1) && achievements1.some(ach => ach.id === index)
+  }
+  const achievementCategoryColor = (item, completed) => {
+    if (!completed) return 'info'
+    const groupColors = ['primary', 'warning', 'danger', 'purple', 'pink']
+    return groupColors[item.group?.charCodeAt(0) % groupColors.length] || 'success'
   }
 
   // 成就详细

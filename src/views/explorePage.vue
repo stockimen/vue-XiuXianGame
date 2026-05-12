@@ -373,6 +373,8 @@
     }, 0)
     player.value.props.strengtheningStone += stones
     player.value.props.money += toSell.length
+    const pinkCount = toSell.filter(i => i.quality === 'pink').length
+    if (pinkCount > 0) player.value.props.currency += pinkCount * (Math.floor(Math.random() * 6) + 1)
     recordEquipmentDecompose(player.value, toSell.length)
     player.value.inventory = player.value.inventory.filter(
       item => !selling.includes(item.quality) || item.lock || keepIds.has(item.id)
