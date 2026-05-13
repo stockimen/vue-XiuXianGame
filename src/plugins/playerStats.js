@@ -41,9 +41,9 @@ export const ensureWifeData = wife => {
   wife.defense = numberValue(wife.defense, 0)
   wife.critical = numberValue(wife.critical, 0)
   if (!wife.initial) {
-    const levelFactor = Math.pow(1.1, Math.max(0, wife.level - 1))
-    const reincarnationFactor = 1 + 0.25 * wife.reincarnation
-    const factor = Math.max(1, levelFactor * reincarnationFactor)
+    const level = Math.max(1, wife.level)
+    const base = 1.10 + (wife.reincarnation || 0) * 0.01
+    const factor = Math.max(1, Math.pow(base, level))
     wife.initial = {
       dodge: wife.dodge,
       attack: Math.max(1, Math.floor(wife.attack / factor)),

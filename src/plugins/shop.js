@@ -10,18 +10,22 @@ const shop = {
     const getAttribute = (type, lv, attribute) => {
       // 根据装备品质调整装备属性值
       const multiplier = 15
-      const dodge = this.getRandomFloatInRange(0.02, 0.25)
-      const Attack = this.getRandomInt(200, 1000) * lv
-      const Health = this.getRandomInt(2000, 10000) * lv
-      const defense = this.getRandomInt(200, 1000) * lv
-      const CriticalHitrate = this.getRandomFloatInRange(0.02, 0.25)
+      const dodge = ['accessory', 'sutra'].includes(type) ? this.getRandomFloatInRange(0.02, 0.25) : 0
+      const rawAttack = this.getRandomInt(200, 1000) * lv
+      const rawHealth = this.getRandomInt(2000, 10000) * lv
+      const rawDefense = this.getRandomInt(200, 1000) * lv
+      const rawCritical = this.getRandomFloatInRange(0.02, 0.25)
+      const finalAttack = ['weapon', 'accessory', 'sutra'].includes(type) ? rawAttack * multiplier : 0
+      const finalHealth = ['armor', 'accessory', 'sutra'].includes(type) ? rawHealth * multiplier : 0
+      const finalDefense = ['armor', 'accessory', 'sutra'].includes(type) ? rawDefense * multiplier : 0
+      const finalCritical = ['weapon', 'accessory', 'sutra'].includes(type) ? rawCritical : 0
       const attrs = {
-        score: this.calculateEquipmentScore(dodge, Attack, Health, CriticalHitrate, defense), // 装备评分
-        dodge: ['accessory', 'sutra'].includes(type) ? dodge : 0,
-        attack: ['weapon', 'accessory', 'sutra'].includes(type) ? Attack * multiplier : 0,
-        health: ['armor', 'accessory', 'sutra'].includes(type) ? Health * multiplier : 0,
-        defense: ['armor', 'accessory', 'sutra'].includes(type) ? defense * multiplier : 0,
-        critical: ['weapon', 'accessory', 'sutra'].includes(type) ? CriticalHitrate : 0
+        score: this.calculateEquipmentScore(dodge, finalAttack, finalHealth, finalCritical, finalDefense),
+        dodge,
+        attack: finalAttack,
+        health: finalHealth,
+        defense: finalDefense,
+        critical: finalCritical
       }
       return attrs[attribute]
     }

@@ -21,7 +21,7 @@
         @click="startOverdraftBoss"
         :disabled="isEnd || isBossOverdraftCoolingDown"
       >
-        透支连战{{ `(${(player.reincarnation + 1) * 12}次/${player.reincarnation + 1}小时)` }}
+        透支连战
       </el-button>
       <el-button @click="router.push('/home')">回家疗伤</el-button>
     </div>
@@ -132,12 +132,6 @@
 
   // 攻击世界boss
   const fightBoss = () => {
-    if (player.value.level < maxLv) {
-      isEnd.value = true
-      stopFightBoss()
-      texts.value.push(`你的境界尚未达到${levelNames(maxLv)}, ${store.boss.name}对于你的挑战不屑一顾`)
-      return
-    }
     if (store.boss.health <= 0 || !store.boss.health) {
       texts.value.push('BOSS刷新时间还未到')
       return

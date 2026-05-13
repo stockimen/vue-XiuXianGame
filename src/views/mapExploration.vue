@@ -610,15 +610,15 @@
             name: item.name,
             level: 1,
             dodge: 0,
-            attack: 100,
-            health: 1000,
-            defense: 100,
+            attack: 10,
+            health: 100,
+            defense: 10,
             critical: 0,
             initial: {
               dodge: 0,
-              attack: 100,
-              health: 1000,
-              defense: 100,
+              attack: 10,
+              health: 100,
+              defense: 10,
               critical: 0
             },
             reincarnation: 0

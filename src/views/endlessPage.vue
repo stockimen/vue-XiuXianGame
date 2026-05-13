@@ -374,14 +374,48 @@
     battleLogs.value.push(
       `你发现了一个宝箱，打开后获得${levels[equipItem.quality]}${equipItem.name}(${genre[equipItem.type]})`
     )
-    // 如果背包满了就不增加装备
-    if (player.value.inventory.length >= player.value.backpackCapacity)
-      battleLogs.value.push(`当前装备背包容量已满, 该装备自动丢弃, 转生可增加背包容量`)
-    else {
+    // 如果背包满了先尝试自动分解
+    tryAutoDecompose()
+    if (player.value.inventory.length < player.value.backpackCapacity) {
       player.value.inventory.push(equipItem)
       recordEquipmentGain(player.value, equipItem)
       checkAchievements(player.value, 'forge', player.value)
+    } else {
+      battleLogs.value.push(`当前装备背包容量已满, 该装备自动丢弃, 转生可增加背包容量`)
     }
+  }
+
+  // 自动分解背包中的装备
+  const tryAutoDecompose = () => {
+    if (player.value.inventory.length < player.value.backpackCapacity) return { stone: 0, money: 0 }
+    const selling = player.value.sellingEquipmentData || []
+    if (!selling.length) return { stone: 0, money: 0 }
+    const inventory = player.value.inventory
+    const keepIds = new Set()
+    if (player.value.keepBestEquipment) {
+      const byType = {}
+      inventory.forEach(item => {
+        if (!byType[item.type] || item.score > byType[item.type].score) byType[item.type] = item
+      })
+      Object.values(byType).forEach(item => keepIds.add(item.id))
+    }
+    const toSell = inventory.filter(item => selling.includes(item.quality) && !item.lock && !keepIds.has(item.id))
+    if (!toSell.length) return { stone: 0, money: 0 }
+    const stone = toSell.reduce((total, i) => {
+      let lv = i.level + (i.level * player.value.reincarnation) / 10
+      return total + Math.floor(Number(lv) || 0)
+    }, 0)
+    const money = toSell.reduce((total, i) => {
+      let lv = i.level + (i.level * player.value.reincarnation) / 10
+      return total + Math.floor(Number(lv) * 10 || 0)
+    }, 0)
+    const pinkCount = toSell.filter(i => i.quality === 'pink').length
+    if (pinkCount > 0) player.value.props.currency += pinkCount * (Math.floor(Math.random() * 6) + 1)
+    player.value.inventory = inventory.filter(item => !toSell.includes(item))
+    player.value.props.strengtheningStone += stone
+    player.value.props.money += money
+    battleLogs.value.push(`自动分解了${toSell.length}件装备, 获得${stone}炼器石, ${money}灵石`)
+    return { stone, money }
   }
 
   // 执行扫荡（冷却机制）
@@ -402,11 +436,16 @@
     player.value.jishaNum += totalSettlements
     recordStat(player.value, 'exploreKills', totalSettlements)
 
-    // 装备掉落：10%概率，背包满则丢弃
+    // 装备掉落：10%概率，背包满先自动分解
     let equipmentGained = 0
     let equipmentDropped = 0
+    let decomposedStone = 0
+    let decomposedMoney = 0
     for (let i = 0; i < totalSettlements; i++) {
       if (Math.random() < 0.1) {
+        const result = tryAutoDecompose()
+        decomposedStone += result.stone
+        decomposedMoney += result.money
         if (player.value.inventory.length < player.value.backpackCapacity) {
           getRandomEquipment()
           equipmentGained++
@@ -424,7 +463,7 @@
 
     // 日志
     battleLogs.value.push(
-      `扫荡完成！${sweepHours}小时产出：${formatNumberToChineseUnit(totalExp)}修为、${formatNumberToChineseUnit(totalMoney)}灵石、${equipmentGained}件装备${equipmentDropped > 0 ? `（${equipmentDropped}件因背包已满丢弃）` : ''}`
+      `扫荡完成！${sweepHours}小时产出：${formatNumberToChineseUnit(totalExp)}修为、${formatNumberToChineseUnit(totalMoney)}灵石、${equipmentGained}件装备${decomposedStone > 0 ? `，自动分解获得${decomposedStone}炼器石、${decomposedMoney}灵石` : ''}${equipmentDropped > 0 ? `（${equipmentDropped}件因背包已满丢弃）` : ''}`
     )
     checkAchievements(player.value, 'battle')
     checkAchievements(player.value, 'forge', player.value)

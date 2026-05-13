@@ -175,7 +175,7 @@
                 </div>
               </template>
             </el-popover>
-            <span else>无</span>
+            <span v-else>无</span>
           </span>
           <span class="equip">
             <span>法器:</span>
@@ -486,7 +486,7 @@
             >
               拥有情缘点: {{ formatNumberToChineseUnit(player.props.qingyuan) }}
             </div>
-            <div class="tag attribute">升级消耗: {{ (player.wife.level || 1) * 2 }}</div>
+            <div class="tag attribute">升级消耗: {{ (player.wife.level || 1) * (2 + (player.wife.reincarnation || 0)) }}</div>
           </div>
         </div>
         <div class="click-box">
@@ -532,8 +532,8 @@
             <el-checkbox v-model="petRootBone" label="提升悟性" />
           </div>
           <div style="display: flex; gap: 8px;">
-            <el-button type="primary" @click="petUpgrade(player.pet)">点击培养</el-button>
-            <el-button :type="autoPetUpgradeTimer ? 'danger' : 'warning'" @click="autoPetUpgradeTimer ? stopAutoPetUpgrade() : autoPetUpgrade()">{{ autoPetUpgradeTimer ? '停止培养' : '一键培养' }}</el-button>
+            <el-button type="primary" @click="petUpgrade(player.pet)" :disabled="!petReincarnation && player.pet.level >= maxLv">点击培养</el-button>
+            <el-button :type="autoPetUpgradeTimer ? 'danger' : 'warning'" @click="autoPetUpgradeTimer ? stopAutoPetUpgrade() : autoPetUpgrade()" :disabled="!autoPetUpgradeTimer && !petReincarnation && player.pet.level >= maxLv">{{ autoPetUpgradeTimer ? '停止培养' : '一键培养' }}</el-button>
           </div>
         </div>
       </div>
@@ -1256,7 +1256,7 @@
 
   const store = useMainStore()
   const router = useRouter()
-  const ver = ref('2.2.7')
+  const ver = ref('2.2.8')
   // 错误信息
   const err = ref('')
   const show = ref(false)
@@ -2357,7 +2357,7 @@
   const wifeUpgrade = item => {
     ensureWifeData(item)
     // 计算道侣升级所需材料数量
-    const consume = item.level * 2
+    const consume = item.level * (2 + (item.reincarnation || 0))
     // 如果情缘点不足
     if (consume > player.value.props.qingyuan) {
       // 发送通知
@@ -2374,9 +2374,14 @@
       confirmButtonText: '确定以及肯定'
     })
       .then(() => {
-        const attack = Math.max(1, Math.floor(item.initial.attack * 0.1 * (1 + 0.25 * (item.reincarnation || 0))))
-        const health = Math.max(1, Math.floor(item.initial.health * 0.1 * (1 + 0.25 * (item.reincarnation || 0))))
-        const defense = Math.max(1, Math.floor(item.initial.defense * 0.1 * (1 + 0.25 * (item.reincarnation || 0))))
+        const base = 1.10 + (item.reincarnation || 0) * 0.01
+        const newLevel = item.level + 1
+        const newAttack = Math.floor(item.initial.attack * Math.pow(base, newLevel))
+        const newHealth = Math.floor(item.initial.health * Math.pow(base, newLevel))
+        const newDefense = Math.floor(item.initial.defense * Math.pow(base, newLevel))
+        const attack = Math.max(1, newAttack - item.attack)
+        const health = Math.max(1, newHealth - item.health)
+        const defense = Math.max(1, newDefense - item.defense)
         // 增加道侣等级
         player.value.wife.level++
         setStatMax(player.value, 'wifeLevel', player.value.wife.level)
@@ -2386,10 +2391,10 @@
           message: '道侣升级提示成功',
           position: 'top-left'
         })
-        // 增加道侣属性
-        player.value.wife.attack += attack
-        player.value.wife.health += health
-        player.value.wife.defense += defense
+        // 设置道侣属性
+        player.value.wife.attack = newAttack
+        player.value.wife.health = newHealth
+        player.value.wife.defense = newDefense
         // 更新玩家属性，添加道侣升级后的属性加成
         playerAttribute(0, attack, health, 0, defense)
         // 扣除情缘点
@@ -2419,20 +2424,25 @@
         gameNotifys({ title: '一键道侣升级', message: `已完成！升级${count}次，道侣等级已满`, position: 'top-left' })
         return
       }
-      const consume = item.level * 2
+      const consume = item.level * (2 + (item.reincarnation || 0))
       if (consume > player.value.props.qingyuan) {
         stopAutoWifeUpgrade()
         gameNotifys({ title: '一键道侣升级', message: `已停止！升级${count}次，情缘点不足`, position: 'top-left' })
         return
       }
-      const attack = Math.max(1, Math.floor(item.initial.attack * 0.1 * (1 + 0.25 * (item.reincarnation || 0))))
-      const health = Math.max(1, Math.floor(item.initial.health * 0.1 * (1 + 0.25 * (item.reincarnation || 0))))
-      const defense = Math.max(1, Math.floor(item.initial.defense * 0.1 * (1 + 0.25 * (item.reincarnation || 0))))
+      const base = 1.10 + (item.reincarnation || 0) * 0.01
+      const newLevel = item.level + 1
+      const newAttack = Math.floor(item.initial.attack * Math.pow(base, newLevel))
+      const newHealth = Math.floor(item.initial.health * Math.pow(base, newLevel))
+      const newDefense = Math.floor(item.initial.defense * Math.pow(base, newLevel))
+      const attack = Math.max(1, newAttack - item.attack)
+      const health = Math.max(1, newHealth - item.health)
+      const defense = Math.max(1, newDefense - item.defense)
       item.level++
       setStatMax(player.value, 'wifeLevel', item.level)
-      item.attack += attack
-      item.health += health
-      item.defense += defense
+      item.attack = newAttack
+      item.health = newHealth
+      item.defense = newDefense
       playerAttribute(0, attack, health, 0, defense)
       player.value.props.qingyuan -= consume
       count++
@@ -2444,13 +2454,13 @@
   }
   const recalcWifeByReincarnation = item => {
     ensureWifeData(item)
-    const factor = 1 + 0.25 * (item.reincarnation || 0)
+    const base = 1.10 + (item.reincarnation || 0) * 0.01
     item.level = 1
-    item.dodge = item.initial.dodge * factor
-    item.critical = item.initial.critical * factor
-    item.attack = Math.floor(item.initial.attack * factor)
-    item.health = Math.floor(item.initial.health * factor)
-    item.defense = Math.floor(item.initial.defense * factor)
+    item.dodge = item.initial.dodge
+    item.critical = item.initial.critical
+    item.attack = Math.floor(item.initial.attack * base)
+    item.health = Math.floor(item.initial.health * base)
+    item.defense = Math.floor(item.initial.defense * base)
   }
   const wifeReincarnationBreakthrough = item => {
     if (!item?.name) return
@@ -2578,8 +2588,6 @@
         recordEquipmentGain(player.value, copy)
       }
       checkAchievements(player.value, 'forge', player.value)
-      inventoryActive.value = 'equipment'
-      equipmentActive.value = item.type
       gameNotifys({
         title: '购买提示',
         message: `您成功花费${totalCost}鸿蒙石购买${count}件${item.name}`
