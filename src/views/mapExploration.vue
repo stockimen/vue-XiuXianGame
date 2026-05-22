@@ -197,7 +197,7 @@
   import { ref, computed, onUnmounted, onMounted, nextTick, watch } from 'vue'
   import { useMainStore } from '@/plugins/store'
   import { ElMessageBox } from 'element-plus'
-  import { levelNames, gameNotifys } from '@/plugins/game'
+  import { levelNames, gameNotifys, wifeBaseStats } from '@/plugins/game'
   import { checkAchievements } from '@/plugins/achievementChecker'
   import { recordStat } from '@/plugins/playerStats'
   import MinHeap from '@/plugins/minheap'
@@ -609,18 +609,11 @@
           player.value.wifes.push({
             name: item.name,
             level: 1,
-            dodge: 0,
-            attack: 10,
-            health: 100,
-            defense: 10,
-            critical: 0,
-            initial: {
-              dodge: 0,
-              attack: 10,
-              health: 100,
-              defense: 10,
-              critical: 0
-            },
+            dodge: wifeBaseStats.dodge,
+            attack: wifeBaseStats.attack,
+            health: wifeBaseStats.health,
+            defense: wifeBaseStats.defense,
+            critical: wifeBaseStats.critical,
             reincarnation: 0
           })
           recordStat(player.value, 'wifeMarried')

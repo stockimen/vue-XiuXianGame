@@ -1251,12 +1251,13 @@
     gameNotifys,
     propItemNames,
     dropdownTypeObject,
-    getBaseStat
+    getBaseStat,
+    wifeBaseStats
   } from '@/plugins/game'
 
   const store = useMainStore()
   const router = useRouter()
-  const ver = ref('2.2.8')
+  const ver = ref('2.2.9')
   // 错误信息
   const err = ref('')
   const show = ref(false)
@@ -2374,11 +2375,11 @@
       confirmButtonText: '确定以及肯定'
     })
       .then(() => {
-        const base = 1.10 + (item.reincarnation || 0) * 0.01
+        const reincarnationMultiplier = Math.pow(1.5, item.reincarnation || 0)
         const newLevel = item.level + 1
-        const newAttack = Math.floor(item.initial.attack * Math.pow(base, newLevel))
-        const newHealth = Math.floor(item.initial.health * Math.pow(base, newLevel))
-        const newDefense = Math.floor(item.initial.defense * Math.pow(base, newLevel))
+        const newAttack = Math.floor(wifeBaseStats.attack * reincarnationMultiplier * Math.pow(1.1, newLevel))
+        const newHealth = Math.floor(wifeBaseStats.health * reincarnationMultiplier * Math.pow(1.1, newLevel))
+        const newDefense = Math.floor(wifeBaseStats.defense * reincarnationMultiplier * Math.pow(1.1, newLevel))
         const attack = Math.max(1, newAttack - item.attack)
         const health = Math.max(1, newHealth - item.health)
         const defense = Math.max(1, newDefense - item.defense)
@@ -2430,11 +2431,11 @@
         gameNotifys({ title: '一键道侣升级', message: `已停止！升级${count}次，情缘点不足`, position: 'top-left' })
         return
       }
-      const base = 1.10 + (item.reincarnation || 0) * 0.01
+      const reincarnationMultiplier = Math.pow(1.5, item.reincarnation || 0)
       const newLevel = item.level + 1
-      const newAttack = Math.floor(item.initial.attack * Math.pow(base, newLevel))
-      const newHealth = Math.floor(item.initial.health * Math.pow(base, newLevel))
-      const newDefense = Math.floor(item.initial.defense * Math.pow(base, newLevel))
+      const newAttack = Math.floor(wifeBaseStats.attack * reincarnationMultiplier * Math.pow(1.1, newLevel))
+      const newHealth = Math.floor(wifeBaseStats.health * reincarnationMultiplier * Math.pow(1.1, newLevel))
+      const newDefense = Math.floor(wifeBaseStats.defense * reincarnationMultiplier * Math.pow(1.1, newLevel))
       const attack = Math.max(1, newAttack - item.attack)
       const health = Math.max(1, newHealth - item.health)
       const defense = Math.max(1, newDefense - item.defense)
@@ -2454,13 +2455,13 @@
   }
   const recalcWifeByReincarnation = item => {
     ensureWifeData(item)
-    const base = 1.10 + (item.reincarnation || 0) * 0.01
+    const reincarnationMultiplier = Math.pow(1.5, item.reincarnation || 0)
     item.level = 1
-    item.dodge = item.initial.dodge
-    item.critical = item.initial.critical
-    item.attack = Math.floor(item.initial.attack * base)
-    item.health = Math.floor(item.initial.health * base)
-    item.defense = Math.floor(item.initial.defense * base)
+    item.dodge = wifeBaseStats.dodge
+    item.critical = wifeBaseStats.critical
+    item.attack = Math.floor(wifeBaseStats.attack * reincarnationMultiplier * 1.1)
+    item.health = Math.floor(wifeBaseStats.health * reincarnationMultiplier * 1.1)
+    item.defense = Math.floor(wifeBaseStats.defense * reincarnationMultiplier * 1.1)
   }
   const wifeReincarnationBreakthrough = item => {
     if (!item?.name) return

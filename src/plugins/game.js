@@ -2,6 +2,14 @@ import { ElNotification } from 'element-plus'
 
 export const maxLv = 144
 
+export const wifeBaseStats = {
+  dodge: 0,
+  attack: 1,
+  health: 10,
+  defense: 1,
+  critical: 0
+}
+
 export const gameNotifys = data => {
   ElNotification.closeAll()
   ElNotification(data)

@@ -530,7 +530,7 @@
             rootBone: newProperties
           },
           // 悟性
-          rootBone: newProperties,
+          rootBone: 0,
           // 好感度
           favorability: 0,
           // 转生

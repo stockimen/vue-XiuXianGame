@@ -1,3 +1,5 @@
+import { wifeBaseStats } from './game'
+
 export const equipmentQualityKeys = ['info', 'success', 'primary', 'purple', 'warning', 'danger', 'pink']
 
 export const createDefaultStats = () => ({
@@ -40,21 +42,14 @@ export const ensureWifeData = wife => {
   wife.health = numberValue(wife.health, 0)
   wife.defense = numberValue(wife.defense, 0)
   wife.critical = numberValue(wife.critical, 0)
-  if (!wife.initial) {
-    const level = Math.max(1, wife.level)
-    const base = 1.10 + (wife.reincarnation || 0) * 0.01
-    const factor = Math.max(1, Math.pow(base, level))
-    wife.initial = {
-      dodge: wife.dodge,
-      attack: Math.max(1, Math.floor(wife.attack / factor)),
-      health: Math.max(1, Math.floor(wife.health / factor)),
-      defense: Math.max(1, Math.floor(wife.defense / factor)),
-      critical: wife.critical
-    }
-  }
-  ;['dodge', 'attack', 'health', 'defense', 'critical'].forEach(key => {
-    wife.initial[key] = numberValue(wife.initial[key], 0)
-  })
+  // 重新计算属性，基于代码常量
+  const reincarnationMultiplier = Math.pow(1.5, wife.reincarnation || 0)
+  const factor = reincarnationMultiplier * Math.pow(1.1, wife.level)
+  wife.attack = Math.floor(wifeBaseStats.attack * factor)
+  wife.health = Math.floor(wifeBaseStats.health * factor)
+  wife.defense = Math.floor(wifeBaseStats.defense * factor)
+  wife.dodge = wifeBaseStats.dodge
+  wife.critical = wifeBaseStats.critical
   return wife
 }
 
